@@ -2,21 +2,52 @@
 
 from textwrap import dedent
 
+from dataclasses import dataclass, field
 from rect import *
 from view import *
+from view_builders import ViewBuilder
 from myxml import *
 
+@dataclass
+class MameLayoutDestination:
+  name:        str = ""
+  decorations: list[Element] = field(default_factory=list)
+  texts:       list[Element] = field(default_factory=list)
+  buttons:     list[Element] = field(default_factory=list)
+  lights:      list[Element] = field(default_factory=list)
+  sliders:     list[Element] = field(default_factory=list)
+  vfds:        list[Element] = field(default_factory=list)
+  groups:      list[Element] = field(default_factory=list)
+
+  @property
+  def items(self):
+    result = list()
+    result.extend(self.decorations)
+    result.extend(self.texts)
+    result.extend(self.buttons)
+    result.extend(self.lights)
+    result.extend(self.sliders)
+    result.extend(self.vfds)
+    result.extend(self.groups)
+    return result
+
 class MameLayoutVisitor(ViewVisitor):
-  def __init__(self, keyboard):
+  def __init__(self, keyboard, io=':panel:'):
+    self.io = io
+
     self.keyboard = keyboard
     self.conditions = {
       'isSd1': keyboard.find("sd1") >= 0,
       'hasSeq': keyboard.find('sd') >= 0,
     }
 
+    self.views = []
+    self.destinations = []
+
     self.colored_rects = {}
     self.button_shapes = {}
     self.text_definitions = {}
+    self.group_definitions = {}
     self.light_definitions = []
 
     knobTop    = Rect(0, 0,    6.5, 4).offset(0.75, 0.75)
@@ -48,108 +79,131 @@ class MameLayoutVisitor(ViewVisitor):
       ]),
     ]
 
+    vfd_off = (0.06, 0.12, 0.10)
+    vfd_on = (0.45, 1.0, 0.95)
+
     self.vfd_definitions = [
-      dedent('''\
-  <!-- The VFD elements -->
-  <element name="segments" defstate="0">
-    <led14seg>
-      <color red="0.45" green="1.0" blue="0.95" />
-    </led14seg>
-  </element>
+      Comment('The VFD elements'),
+      self.layout_element(name='segments', defstate='0', contents=[
+        self.layout_tag('led14seg', color=(0.45, 1.0, 0.95))
+      ]),
+      self.layout_element(name="dot", defstate="0", contents=[
+        self.layout_tag('disk', statemask="0x4000", state="0", color=vfd_off),
+        self.layout_tag('disk', statemask="0x4000", state="0x4000", color=vfd_on)
+      ]),
+      self.layout_element(name="underline", defstate="0", contents=[
+        self.layout_rect(statemask="0x8000", state="0", color=vfd_off),
+        self.layout_rect(statemask="0x8000", state="0x8000", color=vfd_on)
+      ]),
+      self.layout_group(name="vfd_cell", bounds=Rect(0, 0, 342, 572), contents=[
+        self.layout_element(ref="segments", name="~input~", bounds=Rect(50, 69, 214, 311)),
+        self.layout_element(ref="dot", name="~input~", bounds=Rect(253, 337, 42, 42)),
+        self.layout_element(ref="underline", name="~input~", bounds=Rect(43, 411, 183, 25)),
+      ]),
 
-  <element name="dot" defstate="0">
-    <disk statemask="0x4000" state="0"><color red="0.06" green="0.12" blue="0.10" /></disk>
-    <disk statemask="0x4000" state="0x4000"><color red="0.45" green="1.00" blue="0.95" /></disk>
-  </element>
+      self.layout_element(name="vfd_background", contents=[
+        self.layout_rect(color="000000")
+      ]),
 
-  <element name="underline" defstate="0">
-    <rect statemask="0x8000" state="0"><color red="0.06" green="0.12" blue="0.10" /></rect>
-    <rect statemask="0x8000" state="0x8000"><color red="0.45" green="1.00" blue="0.95" /></rect>
-  </element>
-
-  <group name="vfd_cell">
-    <bounds x="0" y="0" width="342" height="572" />
-    <element ref="segments" name="~input~"><bounds x="50" y="69" width="214" height="311" /></element>
-    <element ref="dot" name="~input~"><bounds x="253" y="337" width="42" height="42" /></element>
-    <element ref="underline" name="~input~"><bounds x="43" y="441" width="183" height="25" /></element>
-  </group>
-
-  <element name="vfd_background">
-    <rect>
-      <color red="0.0" green="0.0" blue="0.0" />
-    </rect>
-  </element>
-
-  <group name="vfd">
-    <element ref="vfd_background">
-      <bounds x="0" y="0" width="13680" height="1144" />
-    </element>
-
-    <!-- VFDs -->
-    <repeat count="2">
-      <param name="s" start="0" increment="40" />
-      <param name="y" start="0" increment="572" />
-      <repeat count="40">
-        <param name="n" start="~s~" increment="1" />
-        <param name="x" start="0" increment="342" />
-
-        <param name="input" value="vfd~n~" />
-        <group ref="vfd_cell">
-          <bounds x="~x~" y="~y~" width="342" height="572" />
-        </group>
-
-      </repeat>
-    </repeat>
-  </group>
-''')
+      self.layout_group(name="vfd", contents=[
+        self.layout_element(ref="vfd_background", bounds=Rect(0, 0, 13680, 1144)),
+        Comment('VFDs'),
+        self.layout_tag('repeat', count=2, contents=[
+          self.layout_increment("s", "0", "40"),
+          self.layout_increment("y", "0", "572"),
+          self.layout_tag('repeat', count=40, contents=[
+            self.layout_increment("n", "~s~", "1"),
+            self.layout_increment("x", "0", "342"),
+            Space(),
+            self.layout_param('input', "vfd~n~"),
+            self.layout_group(ref="vfd_cell", contents=[
+              self.layout_tag('bounds', x="~x~", y="~y~", width="342", height="572")
+            ])
+          ]),
+        ]),
+      ])
     ]
 
     self.decoration_definitions = [
       self.layout_element(name='triangle_up', contents=[
         self.layout_svg_image(svg=dedent('''\
           <svg width="2" height="1" viewBox="0 0 2 1">
-          <path stroke="none" fill="#ffffff" d="M0 1H2L 1 0Z" />
+          \t<path stroke="none" fill="#ffffff" d="M0 1H2L 1 0Z" />
           </svg>
           '''))
       ]),
-      
+
       self.layout_element(name='triangle_down', contents=[
         self.layout_svg_image(svg=dedent('''\
           <svg width="2" height="1" viewBox="0 0 2 1">
-          <path stroke="none" fill="#ffffff" d="M0 0H2L1 1Z" />
+          \t<path stroke="none" fill="#ffffff" d="M0 0H2L1 1Z" />
           </svg>
           '''))
       ]),
 
     ]
 
-    self.button_uses = []
-    self.text_uses = []
-    self.light_uses = []
-    self.slider_uses = []
-    self.decoration_uses = []
-    self.vfd_uses = []
     self.code = []
 
-  def layout_bounds(self, bounds, state=None):
-    return bounds.toBounds(state)
+  @property
+  def destination(self):
+    return self.destinations[-1]
+
+  @property
+  def buttons(self):
+    return self.destination.buttons
+
+  @property
+  def texts(self):
+    return self.destination.texts
+
+  @property
+  def lights(self):
+    return self.destination.lights
+
+  @property
+  def sliders(self):
+    return self.destination.sliders
+
+  @property
+  def decorations(self):
+    return self.destination.decorations
+
+  @property
+  def vfds(self):
+    return self.destination.vfds
+
+  @property
+  def groups(self):
+    return self.destination.groups
+
+  def layout_bounds(self, bounds: Rect, state=None):
+    return Element('bounds', clean({
+      'x': f"{bounds.x:.5g}",
+      'y': f"{bounds.y:.5g}",
+      'width': f"{bounds.w:.5g}",
+      'height':f"{bounds.h:.5g}",
+      'state':state,
+      }), [])
+
 
   def layout_color(self, rgb, **kwargs):
-    comps = rgb_components(rgb)
+    if isinstance(rgb, str):
+      rgb = rgb_components(rgb)
     return Element('color', {
       **kwargs,
-      'red': f"{comps[0]:.3g}", 
-      'green': f"{comps[1]:.3g}", 
-      'blue': f"{comps[2]:.3g}"},
+      'red': f"{rgb[0]:.3g}",
+      'green': f"{rgb[1]:.3g}",
+      'blue': f"{rgb[2]:.3g}"},
       []
     )
-  
+
   def layout_tag(self, tag, contents=None, bounds=None, color=None, name=None, ref=None, id=None, **kwargs):
     e = Element(tag, clean({
-      **kwargs,
       'name': name,
       'ref': ref,
       'id': id,
+      **kwargs,
     }), [])
 
     if (bounds != None):
@@ -163,7 +217,7 @@ class MameLayoutVisitor(ViewVisitor):
         for i in contents:
           e.append(i)
       else:
-        e.append(contents)    
+        e.append(contents)
     return e
 
   def layout_element(self, **kwargs):
@@ -185,7 +239,7 @@ class MameLayoutVisitor(ViewVisitor):
       e.append(self.layout_bounds(bounds))
     e.extend(contents)
     return e
-  
+
   def layout_svg_image(self, svg, name=None, color=None, state=None, statemask=None):
     e = Element('image', clean({
       'name': name,
@@ -201,10 +255,10 @@ class MameLayoutVisitor(ViewVisitor):
 
   def layout_text(self, s, name=None, color=None, align=None, attr={}):
     e = Element('text', clean({
-      **attr,
-      'string': s,
       'name': name,
-      'align': align
+      'string': s,
+      'align': align,
+      **attr,
     }), [])
     if color != None:
       e.append(self.layout_color(color))
@@ -212,27 +266,45 @@ class MameLayoutVisitor(ViewVisitor):
 
   def layout_param(self, k, v):
     return Element('param', {'name':k, 'value':v}, [])
-  
+
+  def layout_increment(self, n, s, i):
+    return Element('param', {'name':n, 'start':s, 'increment': i}, [])
+
   def defaultFontSize(self):
     return 4.3
-  
-  def visitAccentColor(self, accent_color: AccentColor):
-    self.accent_color = accent_color.rgb
 
-  def visitConditional(self, conditional: 'Conditional'):
-    for i in (conditional.ifTrue if self.conditions[conditional.condition] else conditional.ifFalse):
+  def visitAccentColor(self, color: AccentColor):
+    dprint(f"visitAccentColor({color})")
+    self.accent_color = color.rgb
+
+  def visitConditional(self, conditional: Conditional):
+    dprint(f"visitConditional({conditional})")
+    items = conditional.ifTrue if self.conditions[conditional.condition] else conditional.ifFalse
+    for i in items:
       i.accept(self)
 
+  def visitGroup(self, group: Group):
+    dprint(f"visitGroup({group})")
+    if group.id not in self.group_definitions:
+      # Add a definition for this group
+      destination = MameLayoutDestination()
+      self.group_definitions[group.id] = destination
+      self.destinations.append(destination)
+
+      for i in group.items:
+        i.accept(self)
+
+      self.destinations.pop()
+
+    # use the group, in its calculated bounds
+    self.destination.groups.append(self.layout_group(ref=group.id, bounds=group.bounds))
+
   def visitDisplay(self, display: 'Display'):
-    self.vfd_uses.append(
-      dedent(f'''\
-        <group ref="vfd">
-          {display.bounds.toBounds()}
-        </group>
-        ''')
-    )
+    dprint(f"visitDisplay({display})")
+    self.vfds.append(self.layout_group(ref="vfd", bounds=display.bounds))
 
   def visitButton(self, button: 'Button'):
+    dprint(f"visitButton({button})")
     x = button.bounds.x
     y = button.bounds.y
     w = button.bounds.w
@@ -250,14 +322,14 @@ class MameLayoutVisitor(ViewVisitor):
         self.layout_svg_image(svg, state="1", color=shade.pressed_color)
       ], name=shape_name)
       self.button_shapes[shape_name] = definition
-    
-    inputtag = ":panel:" + ("buttons_0" if button.number < 32 else "buttons_32")
+
+    inputtag = self.ioport("buttons_0" if button.number < 32 else "buttons_32")
     mask = 1 << (button.number % 32)
     inputmask = f'0x{mask:08x}'
 
     button_id = f'button_{button.number}_{to_id(button.label)}'
 
-    self.button_uses.append(
+    self.buttons.append(
       self.layout_element(
         ref=shape_name,
         id=button_id,
@@ -276,11 +348,12 @@ class MameLayoutVisitor(ViewVisitor):
         self.layout_rect(state=maskval, statemask=maskval, color="#22ff22"),
       ],name=f"light_{light.number}",))
 
-      self.light_uses.extend([
+      self.lights.extend([
         self.layout_element(ref=f'light_{light.number}', name='lights', bounds=light.bounds.offset(x, y))
       ])
 
   def visitLabel(self, label: 'Label'):
+    dprint(f"visitLabel({label})")
     align = None if label.centered else "1"
     alignment = "" if label.centered else "L_"
 
@@ -291,14 +364,14 @@ class MameLayoutVisitor(ViewVisitor):
 
     if id not in self.text_definitions:
       self.text_definitions[id] = self.layout_element(
+        name=f'text_{id}',
         contents=self.layout_text(
           label.text,
           align=align,
           attr=defattr
-        ), 
-        name=f'text_{id}')
-    
-    self.text_uses.append(
+        ))
+
+    self.texts.append(
       self.layout_element(
         ref=f'text_{id}',
         bounds=label.bounds,
@@ -306,14 +379,17 @@ class MameLayoutVisitor(ViewVisitor):
         ))
 
   def visitSlider(self, slider: 'Slider'):
-    self.slider_uses.extend([
+    dprint(f"visitSlider({slider})")
+    self.sliders.extend([
       self.layout_param('slider_id', slider.name),
-      self.layout_param('port_name', f":panel:analog_{slider.name}"),
+      self.layout_param('port_name', self.ioport(f"analog_{slider.name}")),
       self.layout_group(ref="slider", bounds=slider.bounds)
     ])
-    self.code.append(f'\t\t\tadd_vertical_slider(view, "slider_{slider.name}", "slider_knob_{slider.name}", ":panel:analog_{slider.name}")')
+    ioport = self.ioport(f"analog_{slider.name}")
+    self.code.append(f'\t\t\tadd_vertical_slider(view, "slider_{slider.name}", "slider_knob_{slider.name}", "{ioport}")')
 
   def visitRectangle(self, rectangle: 'Rectangle'):
+    dprint(f"visitRectangle({rectangle})")
     if rectangle.color == 'accent':
       color = self.accent_color
     else:
@@ -323,16 +399,32 @@ class MameLayoutVisitor(ViewVisitor):
       self.colored_rects[rect_id] = self.layout_element(name=rect_id, contents=[
         self.layout_rect(color=color)
       ])
-    self.decoration_uses.append(self.layout_element(ref=rect_id, bounds=rectangle.bounds))
-    
+    self.decorations.append(self.layout_element(ref=rect_id, bounds=rectangle.bounds))
+
   def visitSymbol(self, symbol: 'Symbol'):
-    self.decoration_uses.append(
+    dprint(f"visitSymbol({symbol})")
+    self.decorations.append(
       self.layout_element(ref=symbol.name, bounds=symbol.bounds)
     )
+  
+  def visitView(self, view: View):
+    dprint(f"visitView({view})")
+    if len(self.destinations) > 1:
+      dprint(f"have more than one active destination when visiting a view!")
+    elif len(self.destinations) == 1:
+      eprint(f"replacing current destination {self.destinations[0]} with a new View destination")
+    destination = MameLayoutDestination(view.name)
+    self.views.append(destination)
+    self.destinations = [destination]
+    eprint(f"visiting view {view}, items = {view.items}")
+    super().visitView(view)
+
+  def ioport(self, port):
+    return f'{self.io}{port}'
 
   def __str__(self):
     layout = Element('mamelayout', {'version':'2'})
-    
+
     layout.append(Space())
     layout.append(Comment('Decoration definitions'))
     layout.extend(self.decoration_definitions)
@@ -358,27 +450,29 @@ class MameLayoutVisitor(ViewVisitor):
     layout.extend(self.slider_definitions)
 
     layout.append(Space())
-    layout.append(Comment('Panel Group'))
+    layout.append(Comment('Group definitions'))
+    for id, destination in self.group_definitions.items():
+      group = Element('group', {'name': id})
+      group.extend(destination.decorations)
+      group.extend(destination.texts)
+      group.extend(destination.vfds)
+      group.extend(destination.buttons)
+      group.extend(destination.lights)
+      group.extend(destination.sliders)
+      group.extend(destination.groups)
+      layout.append(group)
 
-    group = Element('group', {'name':'panel'}, [])
-    layout.append(group)
-
-    group.extend(self.decoration_uses)
-
-    group.extend(self.vfd_uses)
-
-    group.extend(self.text_uses)
-    group.extend(self.button_uses)
-    group.extend(self.light_uses)
-    
-    group.extend(self.slider_uses)
-    
     layout.append(Space())
-    layout.append(Comment('Panel View'))
-    view = Element('view', {'name':'Panel'}, [
-      Element('group', {'ref':'panel'})
-    ])
-    layout.append(view)
+    for view in self.views:
+      view_element = Element('view', {'name':view.name})
+      view_element.extend(view.decorations)
+      view_element.extend(view.texts)
+      view_element.extend(view.vfds)
+      view_element.extend(view.buttons)
+      view_element.extend(view.lights)
+      view_element.extend(view.sliders)
+      view_element.extend(view.groups)
+      layout.append(view_element)
 
     (preamble, postamble) = self.load("mame_layout_script.lua").split('--CODE--')
 

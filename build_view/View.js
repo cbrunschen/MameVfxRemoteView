@@ -120,7 +120,6 @@ class Display {
         }
       }
     }
-
     parent.setAttribute("viewBox", "0 0 " + this.width + " " + this.height);
   }
 
@@ -223,7 +222,7 @@ class Display {
     0x0000, //  0000 0000 0000 0000 DEL
   ];
 
-  static colorOn = "#00ffbb";
+  static colorOn = "#00ff8a";
   static colorOff = "#002211";
   static overdraw = 0;
 
@@ -411,6 +410,81 @@ class Rect {
 
 displayRect = new Rect(37.5, 16.25, 205, 30);
 displayGlassRect = new Rect(25, -5, 230, 67.5);
+
+class PatchSelectButton {
+  constructor(x, y, w, h, number) {
+    var that = this;
+    this.rect = new Rect(x, y, w, h);
+
+    var rect = this.rect.inset(0.25, 0.25);
+    var translation = "translate(" + x + "," + y + ")";
+    this.halo = rect.toPath(1.25);
+    this.halo.setAttribute("stroke", "#666666");
+    this.halo.setAttribute("stroke-width", "5");
+    this.halo.setAttribute("fill", "none");
+    hideElement(this.halo);
+
+    rect = rect.offset(-rect.x, -rect.y)
+    this.outline = rect.toPath(0.0);
+    this.outline.setAttribute("fill", Shade.LIGHT);
+    this.outline.setAttribute("stroke", "none");
+
+    this.group = createElement("g");
+    this.group.setAttribute("transform", translation);
+    this.group.appendChild(this.outline);
+
+    this.value = number;
+
+    this.group.addEventListener("touchstart", function(e) { that.press(e); }, true);
+    this.group.addEventListener("touchend", function(e) { that.release(e); }, true);
+    this.group.addEventListener("mousedown", function(e) { that.press(e); }, true);
+    this.group.addEventListener("mouseout", function(e) { that.release(e); }, true);
+    this.group.addEventListener("mouseup", function(e) { that.release(e); }, true);
+
+    this.isPressed = false;
+
+    this.onPress = undefined;
+    this.onRelease = undefined;
+  }
+
+  showPressed(isPressed) {
+    if (isPressed) {
+      showElement(this.halo);
+    } else {
+      hideElement(this.halo);
+    }
+  }
+
+  press(e) {
+    e.preventDefault();
+
+    if (!this.isPressed) {
+      this.isPressed = true;
+      this.showPressed(true);
+
+      if (this.onPress != undefined) {
+        this.onPress(this);
+      }
+    }
+
+    return false;
+  }
+
+  release(e) {
+    e.preventDefault();
+
+    if (this.isPressed) {
+      this.isPressed = false;
+      this.showPressed(false);
+
+      if (this.onRelease != undefined) {
+        this.onRelease(this);
+      }
+    }
+
+    return false;
+  }
+}
 
 class Button {
   constructor(x, y, w, h, number, color) {
@@ -710,19 +784,20 @@ class Slider {
   }
 }
 
-class Panel {
+class Connector {
   constructor(serverUrl, keyboard, version) {
     this.serverUrl = serverUrl;
     this.keyboard = keyboard;
     this.version = version;
+    this.reconnect = true;
 
-    this.container = createElement("svg");
-    this.container.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    this.container.setAttribute("width", "2000");
-    this.container.setAttribute("height", "375");
-    this.container.setAttribute("overflow", "scroll");
+    this.patchSelectStatus = 0;
 
-    this.populate(keyboard);
+    this.root = createElement("svg");
+    this.root.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    this.root.setAttribute("width", "800");
+    this.root.setAttribute("height", "600");
+    this.root.setAttribute("overflow", "scroll");
 
     this.startConnection();
   }
@@ -739,20 +814,18 @@ class Panel {
   }
 
   showMessage(message) {
-    if (message != this.serverMessage) {
-      this.serverMessage = message;
-      this.messageText.replaceChildren(document.createTextNode(message));
-      if (message.length == 0) {
-        hideElement(this.messageBox);
-      } else {
-        showElement(this.messageBox);
-      }
+    this.serverMessage = message;
+    this.messageText.replaceChildren(document.createTextNode(message));
+    if (message.length == 0) {
+      hideElement(this.messageBox);
+    } else {
+      showElement(this.messageBox);
     }
   }
 
   connect() {
     var that = this;
-    var panel = this;
+    var view = this;
     var reconnect = function() {
       that.connect();
     }
@@ -762,8 +835,8 @@ class Panel {
     this.socket.onopen = function(event) {
       // console.log("opened: {event}");
       // clear our 'connecting' message
-      panel.showMessage('');
-      panel.sendString("I"); // Request server information
+      view.showMessage('');
+      view.sendString("I"); // Request server information
     };
 
     this.socket.onmessage = function(event) {
@@ -775,39 +848,66 @@ class Panel {
 
       if (c == 'A') {
         // console.log("handling analog value")
-        panel.handleAnalogValue(rest);
+        view.handleAnalogValue(rest);
       } else if (c == 'B') {
         // console.log("handling button state")
-        panel.handleButtonState(rest);
+        view.handleButtonState(rest);
       } else if (c == 'D') {
         // console.log("handling display data")
-        panel.handleDisplayData(rest);
+        view.handleDisplayData(rest);
       } else if (c == 'L') {
         // console.log("handling Light state")
-        panel.handleLightState(rest);
+        view.handleLightState(rest);
       } else if (c == 'P') {
         // console.log("handling blink Phase")
-        panel.handleBlinkPhase(rest);
+        view.handleBlinkPhase(rest);
       } else if (c == 'I') {
         // console.log("handling server information");
-        panel.handleServerInformation(rest);
+        view.handleServerInformation(rest);
       } else if (c == 'M') {
         // console.log("handling server message");
-        panel.handleServerMessage(rest);
+        view.handleServerMessage(rest);
       }
     };
 
     this.socket.onclose = function(event) {
       // console.log("closed: ", event);
-      panel.showMessage("Reconnecting to server ...");
-      panel.needRefresh = true;
-      // reconnect after 1 second
-      setTimeout(reconnect, 1000);
+      if (view.reconnect) {
+        view.showMessage("Reconnecting to server ...");
+        view.needRefresh = true;
+        // reconnect after 1 second
+        setTimeout(reconnect, 1000);
+      } else {
+        // console.log("not reconnecting.")
+      }
     };
 
     this.socket.onerror = function(event) {
       console.log("web socket error: ", event);
     };
+  }
+
+  disconnect() {
+    this.reconnect = false;
+    this.socket.close();
+  }
+
+  addPatchSelectButton(x, y, w, h, number) {
+    var that = this;
+    var button = new PatchSelectButton(x, y, w, h, number);
+    this.haloContainer.appendChild(button.halo);
+
+    this.mainContainer.appendChild(button.group);
+    this.buttons[number] = button;
+
+    button.onPress = function(b) {
+      that.onPatchSelectButtonPressed(b);
+    }
+    button.onRelease = function(b) {
+      that.onPatchSelectButtonReleased(b);
+    }
+
+    return button;
   }
 
   addButton(x, y, w, h, number, color) {
@@ -854,6 +954,11 @@ class Panel {
 
   addLight(x, y, w, h, number) {
     var light = new Light(x, y, w, h, number);
+    let old = this.lights[number];
+    if (old !== undefined) {
+      light.setState(old.state);
+      light.setBlinkPhase(old.blinkPhase);
+    }
     this.lights[number] = light;
     return light;
   }
@@ -894,65 +999,76 @@ class Panel {
     this.decorationsContainer.appendChild(path);
   }
 
-  populate(keyboard) {
-    // Remove all existing children
-    while (this.container.lastChild) {
-      this.container.removeChild(this.container.lastChild);
+  selectView(view) {
+    var oldDisplay = null
+    if (typeof(this.display) !== 'undefined') {
+      oldDisplay = this.display;
     }
 
-    // Note the current keyboard
-    this.keyboard = keyboard;
+    this.populate(this.keyboard, view);
 
-    // and (re-)populate the container.
+    if (oldDisplay !== null
+      && typeof(this.display) !== 'undefined' 
+      && this.display.cells.length == oldDisplay.cells.length 
+      && this.display.cells[0].length == oldDisplay.cells[0].length) {
+      for (let row = 0; row < oldDisplay.cells.length; row++) {
+        const cellrow = oldDisplay.cells[row];
+        for (let col = 0; col < cellrow.length; col++) {
+          const c = cellrow[col];
+          this.display.setChar(row, col, c.char, c.underline, c.blink);
+        }
+      }
+    }
+  }
+
+  populate(keyboard, view) {
+    // Remove all existing children
+    while (this.root.lastChild) {
+      this.root.removeChild(this.root.lastChild);
+    }
+
+    // Note the current keyboard and view
+    this.keyboard = keyboard;
+    this.view = view;
+
+    // and (re-)populate the root.
     this.decorationsContainer = createElement("g");
-    this.container.appendChild(this.decorationsContainer);
+    this.root.appendChild(this.decorationsContainer);
 
     this.haloContainer = createElement("g");
-    this.container.appendChild(this.haloContainer);
+    this.root.appendChild(this.haloContainer);
 
     this.labelContainer = createElement("g");
-    this.container.appendChild(this.labelContainer);
+    this.root.appendChild(this.labelContainer);
 
     this.mainContainer = createElement("g");
-    this.container.appendChild(this.mainContainer);
+    this.root.appendChild(this.mainContainer);
 
-    this.displayContainer = createElement("svg");
-    this.display = new Display(this.displayContainer, 2, 40);
-    this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    this.displayContainer.setAttribute("x", displayRect.x);
-    this.displayContainer.setAttribute("y", displayRect.y);
-    this.displayContainer.setAttribute("width", displayRect.w);
-    this.displayContainer.setAttribute("height", displayRect.h);
-    this.container.appendChild(this.displayContainer);
-
-    this.buttons = new Array();
-    this.lights = new Array();
-    this.analogControls = new Array();
+    if (typeof(this.buttons) === 'undefined') {
+      this.buttons = new Array();
+    }
+    if (typeof(this.lights) === 'undefined') {
+      this.lights = new Array();
+    }
+    if (typeof(this.analogControls) === 'undefined') {
+      this.analogControls = new Array();
+    }
 
     this.blinkPhase = 0;
 
     var hasSeq = false;
     var isSd1 = false;
+
     keyboard = keyboard.toLowerCase();
     if (keyboard.indexOf('sd') != -1) {
       hasSeq = true;
 
       if (keyboard.indexOf('1') != -1) {
         isSd1 = true;
-
-        if (keyboard.indexOf('32') != -1) {
-          keyboard = Keyboard.SD1_32;
-        } else {
-          keyboard = Keyboard.SD1;
-        }
-      } else {
-        keyboard = Keyboard.VFX_SD;
       }
-    } else {
-      keyboard = Keyboard.VFX;
     }
 
-//CODE//
+    this.populateView(this.view, hasSeq, isSd1);
 
     let messageRect = Rect.from(this.displayContainer);
 
@@ -979,7 +1095,7 @@ class Panel {
     this.messageText.setAttribute('x', '50%');
     this.messageText.setAttribute('y', '50%');
 
-    this.container.appendChild(this.messageBox);
+    this.root.appendChild(this.messageBox);
   }
 
   startConnection() {
@@ -996,6 +1112,24 @@ class Panel {
       // console.log(`Sending '${s}'`);
       this.socket.send(s);
     }
+  }
+
+  sendPatchSelectStatus() {
+    const status = "A 1 " + 250 * this.patchSelectStatus;
+    console.log(`Sending patch select status '${status}'`);
+    this.sendString(status);
+  }
+
+  onPatchSelectButtonPressed(button) {
+    this.patchSelectStatus |= (1 << button.value);
+    console.log(`patch select button ${button.value} pressed: status = ${this.patchSelectStatus}`)
+    this.sendPatchSelectStatus();
+  }
+
+  onPatchSelectButtonReleased(button) {
+    this.patchSelectStatus &= ~(1 << button.value);
+    console.log(`patch select button ${button.value} released: status = ${this.patchSelectStatus}`)
+    this.sendPatchSelectStatus();
   }
 
   onButtonPressed(button) {
@@ -1127,7 +1261,7 @@ class Panel {
 
     var keyboard = parts[0];
     var version = parseInt(parts[1]);
-    // console.log(`Server information message '${s}' -> keyboard '${keyboard}' version '${version}'`);
+    console.log(`Server information message '${s}' -> keyboard '${keyboard}' version '${version}'`);
     if (version != this.version) {
       // we need to reload, forcing a refresh from the server.
       // console.log(`keyboard '${keyboard}' vs '${this.keyboard}', version '${version}' vs '${this.version}', would reload`);
@@ -1141,7 +1275,7 @@ class Panel {
     } else if (keyboard != this.keyboard) {
       // we need to rebuild the panel, but can stay on the same software, no need to reload.
       console.log("Rebuilding the panel in place");
-      this.populate(keyboard);
+      this.populate(keyboard, this.view);
       this.sendString("CA0B0L0D0"); // Send me nothing
       this.sendString("CA1B1L1D1"); // Send me analog data, buttons, and display data - ie refresh everything
     } else {
@@ -1160,4 +1294,9 @@ class Panel {
     // console.log(`Handling server message: '${data}'`);
     this.showMessage(data);
   }
+
+//CODE//
+
 }
+
+

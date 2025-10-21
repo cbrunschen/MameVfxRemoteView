@@ -788,7 +788,7 @@ struct Server : Connected {
     struct pollfd pfd;
     m_mame_thread_commands.checkRead(pfd);
 
-    L(std::cerr << "Connecting to MAME ..." << std::endl);
+    std::cerr << "Connecting to MAME ..." << std::endl;
 
     while (true) {
       mg_connection *conn = nullptr;
@@ -796,7 +796,7 @@ struct Server : Connected {
 
       if (!m_mame_direct.empty()) {
         // Try to connect to the TCP server
-        std::cerr << "Trying to connect to " << m_mame_direct << " ...";
+        L(std::cerr << "Trying to connect to " << m_mame_direct << std::endl);
 
         std::string host = m_mame_direct;
         std::string port = "15112";
@@ -828,7 +828,7 @@ struct Server : Connected {
 
           // fcntl(sfd, F_SETFL, O_NONBLOCK);
 
-          std::cerr << "Trying to connect to " << rp << " ...";
+          L(std::cerr << "Trying to connect to " << rp << std::endl);
 
           connect(sfd, rp->ai_addr, rp->ai_addrlen);
 
@@ -839,7 +839,7 @@ struct Server : Connected {
             if (pfds[0].revents & POLLIN) {
               return finish_talking_to_mame();
             } else if (pfds[1].revents == POLLOUT) {
-              L(std::cerr << " Connected!" << std::endl);
+              L(std::cerr << "Connected to " << rp << std::endl);
               break;                  /* Success */
             }
           }
@@ -872,7 +872,7 @@ struct Server : Connected {
           path = m_mame_ws.substr(slash+1);
         }
 
-        std::cerr << "Trying to connect to websocket " << m_mame_ws << " ...";
+        L(std::cerr << "Trying to connect to websocket " << m_mame_ws << std::endl);
 
         conn = mg_connect_websocket_client(host.c_str(), port, false,
             &error_buffer[0], error_buffer.size(),
@@ -898,6 +898,7 @@ struct Server : Connected {
       }
 
       // Connected!
+      std::cerr << "Connected!" << std::endl;
 
       set_mame_connection_state(cs_connected);
       send_to_all_clients("DX"); // clear the clients' screen(s)
@@ -990,6 +991,8 @@ struct Server : Connected {
       reset_mame_connection();
 
       set_mame_connection_state(cs_reconnecting);
+
+      std::cerr << "Reconnecting to MAME ..." << std::endl;
     }
   }
 

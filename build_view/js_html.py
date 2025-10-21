@@ -5,11 +5,23 @@ from dataclasses import dataclass, field
 
 from view import *
 
+@dataclass
+class HTMLJSView:
+  name: str
+  code: list[str] = field(default_factory=list)
+
 class HTMLJSVisitor(ViewVisitor):
 
   def __init__(self):
     self.indent = '    '
-    self.code = []
+    self.views: list[HTMLJSView] = []
+    self.offset: Offset = Offset(0, 0)
+  
+  @property
+  def code(self):
+    if self.views is None or len(self.views) == 0:
+      raise ValueError("attempting to access code with no view!")
+    return self.views[-1].code
   
   def iin(self):
     self.indent = '  ' + self.indent
@@ -25,10 +37,17 @@ class HTMLJSVisitor(ViewVisitor):
   
   def extend(self, s):
     self.code.extend([indent(l, self.indent) for l in s])
-
-  def visitPanel(self, panel):
-    super().visitPanel(panel)
-    self.append(f'this.container.setAttribute("viewBox", "{panel.bounds.viewBox()}");')
+  
+  def visitView(self, view: View):
+    self.views.append(HTMLJSView(view.name))
+    super().visitView(view)
+    bounds = view.bounds
+    viewBox = f"{bounds.x} {bounds.y} {bounds.w} {bounds.h}"
+    self.append(f'this.root.setAttribute("x", "0mm");')
+    self.append(f'this.root.setAttribute("y", "0mm");')
+    self.append(f'this.root.setAttribute("width", "{bounds.w}mm");')
+    self.append(f'this.root.setAttribute("height", "{bounds.h}mm");')
+    self.append(f'this.root.setAttribute("viewBox", "{viewBox}");')
   
   def visitAccentColor(self, color: AccentColor):
     self.append(f'this.accentColor = "{color.rgb}";')
@@ -45,44 +64,97 @@ class HTMLJSVisitor(ViewVisitor):
       i.accept(self)
     self.iout()
     self.append('}')
+  
+  def visitGroup(self, group: Group):
+    self.offset += group.offset
+    self.append(f"// Starting group '{group.id}' at offset {self.offset.x},{self.offset.y}")
+
+    for i in group.items:
+      i.accept(self)
+
+    self.append(f"// Ending group '{group.id}'")
+
+    self.offset -= group.offset
 
   def visitDisplay(self, display: 'Display'):
+    bounds = display.bounds + self.offset
     self.append(dedent(f'''
       this.displayContainer = createElement("svg");
       this.display = new Display(this.displayContainer, 2, 40);
       this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
-      this.displayContainer.setAttribute("x", {display.bounds.x});
-      this.displayContainer.setAttribute("y", {display.bounds.y});
-      this.displayContainer.setAttribute("width", {display.bounds.w});
-      this.displayContainer.setAttribute("height", {display.bounds.h});
-      this.container.appendChild(this.displayContainer);
+      this.displayContainer.setAttribute("x", {bounds.x});
+      this.displayContainer.setAttribute("y", {bounds.y});
+      this.displayContainer.setAttribute("width", {bounds.w});
+      this.displayContainer.setAttribute("height", {bounds.h});
+      this.root.appendChild(this.displayContainer);
     '''))
 
+  def visitPatchSelectButton(self, patchSelectButton: 'PatchSelectButton'):
+    bounds = patchSelectButton.bounds + self.offset
+    self.append(f'this.addPatchSelectButton({bounds.coords()}, {patchSelectButton.number});')
+
   def visitButton(self, button: 'Button'):
+    bounds = button.bounds + self.offset
     shade = button.shade.name.upper()
-    addButton = f'this.addButton({button.bounds.coords()}, {button.number}, Shade.{shade})'
+    addButton = f'this.addButton({bounds.coords()}, {button.number}, Shade.{shade})'
     if button.light:
       light = button.light
-      self.append(f'{addButton}.addLight(this.addLight({light.bounds.coords()}, {light.number}));')
+      bounds = light.bounds
+      self.append(f'{addButton}.addLight(this.addLight({bounds.coords()}, {light.number}));')
     else:
       self.append(f'{addButton};')
 
   def visitLabel(self, label: 'Label'):
+    bounds = label.bounds + self.offset
     bold = 'true' if label.bold else 'false'
     italic = 'true' if label.italic else 'false'
     centered = 'true' if label.centered else 'false'
-    self.append(f'this.addLabel({label.bounds.coords()}, "{label.text}", {label.fontSize}, {bold}, {italic}, {centered});')
+    self.append(f'this.addLabel({bounds.coords()}, "{label.text}", {label.fontSize}, {bold}, {italic}, {centered});')
 
   def visitSlider(self, slider: 'Slider'):
-    self.append(f'this.addSlider({slider.bounds.coords()}, {slider.channel}, 0.5);')
+    bounds = slider.bounds + self.offset
+    self.append(f'this.addSlider({bounds.coords()}, {slider.channel}, 0.5);')
 
   def visitRectangle(self, rectangle: 'Rectangle'):
+    bounds = rectangle.bounds + self.offset
     color = 'this.accentColor' if rectangle.color == 'accent' else f'"{rectangle.color}"'
-    self.append(f'this.addRectangle({rectangle.bounds.coords()}, {color});')
+    self.append(f'this.addRectangle({bounds.coords()}, {color});')
 
   def visitSymbol(self, symbol: 'Symbol'):
-    self.append(f'this.addSymbol({symbol.bounds.coords()}, "{symbol.name}");')
+    bounds = symbol.bounds + self.offset
+    self.append(f'this.addSymbol({bounds.coords()}, "{symbol.name}");')
   
   def __str__(self):
     (preamble, postamble) = self.load("View.js").split('//CODE//')
-    return '\n'.join([preamble] + self.code + [postamble])
+
+    functions = []
+    dispatcher = ["  populateView(view, hasSeq, isSd1) {"]
+    options = [indent(dedent('''\
+      populateViewOptions(select) {
+        while (select.lastChild) {
+          select.removeChild(select.lastChild);
+        }
+        var option;
+      '''), '  ')]
+
+    for i, v in enumerate(self.views):
+      camel_parts = [x.capitalize() for x in v.name.lower().split("_")]
+      name = "".join(camel_parts)
+      display_name = " ".join(camel_parts)
+
+      functions.append(f"  populate{name}View(hasSeq, isSd1) {{")
+      functions.extend(v.code)
+      functions.append("  }")
+
+      dispatcher.append(f"    if (view == {i}) return this.populate{name}View(hasSeq, isSd1);")
+
+      options.extend([
+        "    option = document.createElement('option');",
+        f'    option.text = "{display_name}";',
+        f"    option.value = {i};"
+        "    select.appendChild(option);"
+      ])
+    options.append("  }")
+    dispatcher.append("  }")
+    
+    return '\n'.join([preamble] + options + functions + dispatcher + [postamble])

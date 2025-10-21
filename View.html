@@ -2,23 +2,40 @@
 <head>
 	<title>Front Panel</title>
 </head>
-<body onload="prepare();" bgcolor="black" class="notranslate"">
-
+<body onload="prepare();" bgcolor="black" class="notranslate">
+  <div><select id="panel_type"></select></div>
+  <div id="container" width="100%" height="100%">
+  </div>
 </body>
 
 <script language="javascript" src="View.js"></script>
 <script language="javascript">
+
+var connector = null;
+
 function wsroot() {
   var l = window.location.href;
   return (l.startsWith("https") ? "wss" : "ws") + l.substring(l.indexOf(':'), l.lastIndexOf('/')) + "/socket";
 }
 
-function prepare() {
-  var panelUrl = wsroot();
-  var panel = new Panel(panelUrl, '$keyboard$', '$version$');
-  document.body.appendChild(panel.container);
-  panel.showMessage("Connecting to server...");
+function changePanelType(e) {
+  console.log("Changing panel type: ");
+  console.log(e);
+  connector.selectView(e.target.value);
 }
+
+function prepare() {
+  panelTypeSelect = document.getElementById("panel_type");
+  panelTypeSelect.onchange = changePanelType;
+
+  connector = new Connector(wsroot(), '$keyboard$', '$version$');
+  connector.populateViewOptions(panelTypeSelect);
+
+  connector.selectView(0);
+  container.appendChild(connector.root);
+  connector.showMessage("Connecting to server...");
+}
+
 </script>
 
 </html>

@@ -14,7 +14,7 @@ class Document:
 class Element:
   tag: str
   attrs: dict[str, str] = field(default_factory=dict)
-  children: list[any] = field(default_factory=list)
+  children: list['Element|CDATA|Space|Comment'] = field(default_factory=list)
 
   def append(self, i):
     if (i == self):
@@ -24,15 +24,15 @@ class Element:
   def extend(self, l):
     for i in l:
       self.append(i)
-
+  
   def __str__(self):
     items = [ f'<{self.tag}' ]
     if self.attrs is not None:
       items.extend([f' {k}="{v}"' for (k,v) in self.attrs.items() if v is not None])
 
-    if self.children is not None and len(self.children) > 0:
+    if len(self.children) > 0:
       items.append('>\n')
-      items.extend([indent(str(child), '  ') for child in self.children])
+      items.extend([indent(str(child), '\t') for child in self.children])
       items.append(f'</{self.tag}>\n')
 
     else:
@@ -47,7 +47,7 @@ class CDATA:
   def __str__(self):
     parts = self.contents.split(']]>')
     escaped = ']]>]]><[CDATA['.join(parts)
-    return f'<![CDATA[\n{indent(escaped, '  ')}\n]]>'
+    return f'<![CDATA[\n{indent(escaped, '\t')}\n]]>'
 
 @dataclass
 class Space:

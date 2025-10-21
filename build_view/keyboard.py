@@ -40,7 +40,7 @@ def w_oct(i):
 
 
 @dataclass
-class Key(ViewElement):
+class Key(ViewItem):
   black: bool
   bounds: Rect
   number: int
@@ -49,7 +49,7 @@ class Key(ViewElement):
     visitor.visitKey(self)
 
 @dataclass
-class Keyboard(ViewElement):
+class Keyboard(ViewItem):
   octaves: int
   # this will be populated
   keys: list[Key] = field(default_factory=list)

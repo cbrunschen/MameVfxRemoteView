@@ -4,6 +4,8 @@ from re import sub
 from textwrap import wrap
 from sys import stderr
 
+DEBUG = False
+
 def to_id(s):
   """Merge multiple lines (trimming hyphenation),
      then replace non-identifier characters with '_',
@@ -18,3 +20,7 @@ def rgb_components(rgb):
 
 def eprint(*args, **kwargs):
   print(*args, file=stderr, **kwargs)
+
+def dprint(*args, **kwargs):
+  if DEBUG:
+    print(*args, file=stderr, **kwargs)
