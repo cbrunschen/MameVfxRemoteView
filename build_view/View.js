@@ -808,7 +808,7 @@ class Wheel extends Slideable {
     this.frame.setAttribute("stroke-width", "1.25");
     this.group.appendChild(this.frame);
 
-    let body = makeRectPath(3, 5, rect.w - 6, rect.h - 10, Colors.WHITE);
+    let body = makeRectPath(3, 5, rect.w - 6, rect.h - 10, Colors.BLACK_PLASTIC);
     this.group.appendChild(body);
 
     this.handleX = 3;
@@ -822,6 +822,13 @@ class Wheel extends Slideable {
     this.handle.appendChild(makeRectPath(0, 3, this.handleW, 4, Colors.BLACK_PLASTIC));
     this.handle.appendChild(makeRectPath(0, 7, this.handleW, 3, Colors.BLACK_PLASTIC_LIGHT));
     this.group.appendChild(this.handle);
+  }
+
+  release(e) {
+    super.release(e)
+    if (this.autocenter) {
+      this.setValue(0.5);
+    }
   }
 }
 
