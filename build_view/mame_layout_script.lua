@@ -129,7 +129,6 @@ local function pointer_updated(type, id, dev, x, y, btn, dn, up, cnt)
 end
 
 function release_pointer(id)
-	emu.print_info("releasing pointer " .. id)
 	local pointer = pointers[id]
 	if pointer ~= nil then
 		local slider = sliders[pointer.selected_slider]
