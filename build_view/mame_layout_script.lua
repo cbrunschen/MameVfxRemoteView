@@ -32,8 +32,10 @@ end
 -- The knob's Y position must be animated using <animate inputtag="{port_name}">.
 -- The click area's vertical size must exactly span the range of the
 -- knob's movement.
-function add_vertical_slider(view, clickarea_id, knob_id, port_name)
+function add_vertical_slider(view, clickarea_id, knob_id, port_name, autocenter)
 	local slider = {}
+
+	slider.autocenter = autocenter or False
 
 	slider.clickarea = view.items[clickarea_id]
 	if slider.clickarea == nil then
@@ -47,7 +49,14 @@ function add_vertical_slider(view, clickarea_id, knob_id, port_name)
 		return
 	end
 
-	local port = machine.ioport.ports[port_name]
+	local port = nil
+	local colon = string.byte(":")
+	if port_name:byte(1) == colon then
+		port = machine.ioport.ports[port_name]
+	else
+		port = file.device:ioport(port_name)
+	end
+	
 	if port == nil then
 		emu.print_error("Port: '" .. port_name .. "' not found.")
 		return
@@ -66,10 +75,18 @@ function add_vertical_slider(view, clickarea_id, knob_id, port_name)
 	table.insert(sliders, slider)
 end
 
+local function set_field_value(field, new_value)
+	if field.is_analog then
+		field:set_value(new_value)
+	else
+		field.user_value = new_value
+	end
+end
+
 local function pointer_updated(type, id, dev, x, y, btn, dn, up, cnt)
 	-- If a button is not pressed, reset the state of the current pointer.
 	if btn & 1 == 0 then
-		pointers[id] = nil
+		release_pointer(id)
 		return
 	end
 
@@ -96,7 +113,7 @@ local function pointer_updated(type, id, dev, x, y, btn, dn, up, cnt)
 
 	-- A slider is selected. Update state and, indirectly, slider knob position,
 	-- based on the pointer's Y position. The attached IO field must be
-	-- an IPT_ADJUSTER with a range of 0-1023.
+	-- an IPT_ADJUSTER, or an anlog value, with a range of 0-1023.
 
 	local pointer = pointers[id]
 	local slider = sliders[pointer.selected_slider]
@@ -108,18 +125,33 @@ local function pointer_updated(type, id, dev, x, y, btn, dn, up, cnt)
 	local new_value = 1023 * (1 - fraction)
 	new_value = math.floor(new_value + 0.5)
 	clamped_value = clamp(new_value)
-	slider.field.user_value = clamped_value
+	set_field_value(slider.field, clamped_value)
+end
+
+function release_pointer(id)
+	emu.print_info("releasing pointer " .. id)
+	local pointer = pointers[id]
+	if pointer ~= nil then
+		local slider = sliders[pointer.selected_slider]
+		if slider.autocenter then
+			set_field_value(slider.field, 512)
+		end
+	end
+	pointers[id] = nil
 end
 
 local function pointer_left(type, id, dev, x, y, up, cnt)
-	pointers[id] = nil
+	release_pointer(id)
 end
 
 local function pointer_aborted(type, id, dev, x, y, up, cnt)
-	pointers[id] = nil
+	release_pointer(id)
 end
 
 local function forget_pointers()
+	for id, pointer in pairs(pointers) do
+		release_pointer(id)
+	end
 	pointers = {}
 end
 

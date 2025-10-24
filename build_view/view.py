@@ -5,21 +5,22 @@ from dataclasses import dataclass, field
 from rect import *
 from util import *
 from os import path
+from colors import colors
 
 ABOVE = 1
 CENTERED = 2
 BELOW = CENTERED
 ABOVE_CENTERED = ABOVE | CENTERED
 
-@dataclass
+@dataclass(frozen=True)
 class Shade:
   name: str
   color: str
   pressed_color: str
 
-SHADE_LIGHT = Shade('light', "#bbbbbb", "#ffffff")
-SHADE_MEDIUM = Shade('medium', "#777777", "#ffffff")
-SHADE_DARK = Shade('dark', "#333333", '#ffffff')
+SHADE_LIGHT = Shade('light', 'button_light', 'button_pressed')
+SHADE_MEDIUM = Shade('medium', 'button_medium', 'button_pressed')
+SHADE_DARK = Shade('dark', 'button_dark', 'button_pressed')
 
 class ViewItem:
   def accept(self, visitor: 'ViewVisitor') -> None:
@@ -48,7 +49,7 @@ class ViewVisitor:
   def visitConditional(self, conditional: 'Conditional'):
     pass
 
-  def visitAccentColor(self, color: 'AccentColor'):
+  def visitAccentColor(self, accent: 'AccentColor'):
     pass
 
   def visitDisplay(self, display: 'Display'):
@@ -66,21 +67,28 @@ class ViewVisitor:
   def visitSlider(self, slider: 'Slider'):
     pass
 
+  def visitWheel(self, wheel: 'Wheel'):
+    pass
+
   def visitRectangle(self, rectangle: 'Rectangle'):
     pass
 
   def visitSymbol(self, symbol: 'Symbol'):
     pass
 
-  def visitPatchSelectButton(self, patchSelectButton: 'PatchSelectButton'):
+  def visitPatchSelectButton(self, button: 'PatchSelectButton'):
     pass
 
   def visitGroup(self, group: 'Group'):
     pass
 
+  def visitKey(self, key: 'Key'):
+    pass
+
+
 @dataclass
 class AccentColor(ViewItem):
-  rgb: str
+  color: str
 
   def accept(self, visitor: ViewVisitor):
     visitor.visitAccentColor(self)
@@ -96,6 +104,7 @@ class Display(ViewItem):
 class PatchSelectButton(ViewItem):
   bounds: Rect
   number: int
+  shade: Shade = SHADE_LIGHT
 
   def accept(self, visitor):
     visitor.visitPatchSelectButton(self)
@@ -127,6 +136,16 @@ class Slider(ViewItem):
 
   def accept(self, visitor):
     visitor.visitSlider(self)
+
+@dataclass
+class Wheel(ViewItem):
+  bounds: Rect
+  channel: int
+  name: str
+  autocenter: bool
+
+  def accept(self, visitor):
+    visitor.visitWheel(self)
 
 @dataclass
 class Label(ViewItem):
@@ -169,6 +188,7 @@ class Context(ViewItem):
   def add_item(self, item: ViewItem):
     self.items.append(item)
     self._bounds = None
+    return item
   
   @property
   def bounds(self):
@@ -234,6 +254,7 @@ class Group(Context):
   def add_item(self, item: ViewItem):
     super().add_item(item)
     self._intrinsic_bounds = None
+    return item
 
   @property
   def intrinsic_bounds(self):
@@ -252,6 +273,10 @@ class Group(Context):
       self._bounds = self.intrinsic_bounds + self._offset
     return self._bounds
   
+  @bounds.setter
+  def bounds(self, b):
+    self._bounds = b
+  
   @property
   def offset(self):
     return self._offset
@@ -263,6 +288,17 @@ class Group(Context):
 
   def accept(self, visitor: ViewVisitor):
     visitor.visitGroup(self)
+
+
+# A key on the keyboard!
+@dataclass
+class Key(ViewItem):
+  black: bool
+  bounds: Rect
+  number: int
+
+  def accept(self, visitor: ViewVisitor):
+    visitor.acceptKey(self)
 
 
 # An entire View

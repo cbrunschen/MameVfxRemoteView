@@ -2,6 +2,7 @@
 
 from textwrap import indent, dedent, wrap
 from dataclasses import dataclass, field
+from colors import Color, colors
 
 from view import *
 
@@ -12,7 +13,7 @@ class HTMLJSView:
 
 class HTMLJSVisitor(ViewVisitor):
 
-  def __init__(self):
+  def __init__(self, real_logos: bool = False):
     self.indent = '    '
     self.views: list[HTMLJSView] = []
     self.offset: Offset = Offset(0, 0)
@@ -49,8 +50,8 @@ class HTMLJSVisitor(ViewVisitor):
     self.append(f'this.root.setAttribute("height", "{bounds.h}mm");')
     self.append(f'this.root.setAttribute("viewBox", "{viewBox}");')
   
-  def visitAccentColor(self, color: AccentColor):
-    self.append(f'this.accentColor = "{color.rgb}";')
+  def visitAccentColor(self, accent: AccentColor):
+    self.append(f'this.accentColor = Colors.{snake_to_upper_snake_case(accent.color)};')
   
   def visitConditional(self, conditional: Conditional):
     self.append(f'if ({conditional.condition}) {{')
@@ -89,14 +90,14 @@ class HTMLJSVisitor(ViewVisitor):
       this.root.appendChild(this.displayContainer);
     '''))
 
-  def visitPatchSelectButton(self, patchSelectButton: 'PatchSelectButton'):
-    bounds = patchSelectButton.bounds + self.offset
-    self.append(f'this.addPatchSelectButton({bounds.coords()}, {patchSelectButton.number});')
+  def visitPatchSelectButton(self, button: 'PatchSelectButton'):
+    bounds = button.bounds + self.offset
+    self.append(f'this.addPatchSelectButton({bounds.coords()}, {button.number});')
 
   def visitButton(self, button: 'Button'):
     bounds = button.bounds + self.offset
-    shade = button.shade.name.upper()
-    addButton = f'this.addButton({bounds.coords()}, {button.number}, Shade.{shade})'
+    color = snake_to_upper_snake_case(button.shade.color)
+    addButton = f'this.addButton({bounds.coords()}, {button.number}, Colors.{color})'
     if button.light:
       light = button.light
       bounds = light.bounds
@@ -115,20 +116,28 @@ class HTMLJSVisitor(ViewVisitor):
     bounds = slider.bounds + self.offset
     self.append(f'this.addSlider({bounds.coords()}, {slider.channel}, 0.5);')
 
+  def visitWheel(self, wheel: 'Wheel'):
+    bounds = wheel.bounds + self.offset
+    self.append(f'this.addWheel({bounds.coords()}, {wheel.channel}, 0.5, {"true" if wheel.autocenter else "false"});')
+
   def visitRectangle(self, rectangle: 'Rectangle'):
     bounds = rectangle.bounds + self.offset
-    color = 'this.accentColor' if rectangle.color == 'accent' else f'"{rectangle.color}"'
+    color = 'this.accentColor' if rectangle.color == 'accent' else f'Colors.{snake_to_upper_snake_case(rectangle.color)}'
     self.append(f'this.addRectangle({bounds.coords()}, {color});')
 
   def visitSymbol(self, symbol: 'Symbol'):
     bounds = symbol.bounds + self.offset
     self.append(f'this.addSymbol({bounds.coords()}, "{symbol.name}");')
   
+  def visitKey(self, key: 'Key'):
+    bounds = key.bounds + self.offset
+    self.append(f'this.addKey({bounds.coords()}, {key.number}, {key.black});')
+
   def __str__(self):
-    (preamble, postamble) = self.load("View.js").split('//CODE//')
+    template = self.load("View.js")
 
     functions = []
-    dispatcher = ["  populateView(view, hasSeq, isSd1) {"]
+    dispatcher = ["  populateView(view, hasSeq, isSd1, isSd132) {"]
     options = [indent(dedent('''\
       populateViewOptions(select) {
         while (select.lastChild) {
@@ -142,11 +151,11 @@ class HTMLJSVisitor(ViewVisitor):
       name = "".join(camel_parts)
       display_name = " ".join(camel_parts)
 
-      functions.append(f"  populate{name}View(hasSeq, isSd1) {{")
+      functions.append(f"  populate{name}View(hasSeq, isSd1, isSd132) {{")
       functions.extend(v.code)
       functions.append("  }")
 
-      dispatcher.append(f"    if (view == {i}) return this.populate{name}View(hasSeq, isSd1);")
+      dispatcher.append(f"    if (view == {i}) return this.populate{name}View(hasSeq, isSd1, isSd132);")
 
       options.extend([
         "    option = document.createElement('option');",
@@ -156,5 +165,8 @@ class HTMLJSVisitor(ViewVisitor):
       ])
     options.append("  }")
     dispatcher.append("  }")
-    
-    return '\n'.join([preamble] + options + functions + dispatcher + [postamble])
+
+    colordefs = ',\n'.join([f'  "{snake_to_upper_snake_case(c.name)}": "{c.hex}"' for c in colors])
+    code = '\n'.join(options + functions + dispatcher)
+
+    return template.replace("//COLORS//", colordefs).replace('//CODE//', code)

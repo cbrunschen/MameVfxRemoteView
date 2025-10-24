@@ -1,7 +1,5 @@
-Shade = {
-  LIGHT: "#bbbbbb",
-  MEDIUM: "#777777",
-  DARK: "#333333"
+Colors = {
+//COLORS//
 };
 
 LabelPosition = {
@@ -222,8 +220,8 @@ class Display {
     0x0000, //  0000 0000 0000 0000 DEL
   ];
 
-  static colorOn = "#00ff8a";
-  static colorOff = "#002211";
+  static colorOn = Colors.VFD_ON;
+  static colorOff = Colors.VFD_OFF;
   static overdraw = 0;
 
   showSegments(segments, lit) {
@@ -419,14 +417,14 @@ class PatchSelectButton {
     var rect = this.rect.inset(0.25, 0.25);
     var translation = "translate(" + x + "," + y + ")";
     this.halo = rect.toPath(1.25);
-    this.halo.setAttribute("stroke", "#666666");
+    this.halo.setAttribute("stroke", Colors.HALO);
     this.halo.setAttribute("stroke-width", "5");
     this.halo.setAttribute("fill", "none");
     hideElement(this.halo);
 
     rect = rect.offset(-rect.x, -rect.y)
     this.outline = rect.toPath(0.0);
-    this.outline.setAttribute("fill", Shade.LIGHT);
+    this.outline.setAttribute("fill", Colors.BUTTON_LIGHT);
     this.outline.setAttribute("stroke", "none");
 
     this.group = createElement("g");
@@ -434,6 +432,7 @@ class PatchSelectButton {
     this.group.appendChild(this.outline);
 
     this.value = number;
+    this.color = Colors.BUTTON_LIGHT;
 
     this.group.addEventListener("touchstart", function(e) { that.press(e); }, true);
     this.group.addEventListener("touchend", function(e) { that.release(e); }, true);
@@ -494,7 +493,7 @@ class Button {
     var rect = this.rect.inset(0.25, 0.25);
     var translation = "translate(" + x + "," + y + ")";
     this.halo = rect.toPath(1.25);
-    this.halo.setAttribute("stroke", "#666666");
+    this.halo.setAttribute("stroke", Colors.HALO);
     this.halo.setAttribute("stroke-width", "5");
     this.halo.setAttribute("fill", "none");
     hideElement(this.halo);
@@ -579,8 +578,8 @@ class Light {
 
     this.lightOn = this.rect.toPath();
     this.lightOff = this.lightOn.cloneNode(true);
-    this.lightOn.setAttribute("fill", "#22ff22");
-    this.lightOff.setAttribute("fill", "#112211");
+    this.lightOn.setAttribute("fill", Colors.LIGHT_ON);
+    this.lightOff.setAttribute("fill", Colors.LIGHT_OFF);
     hideElement(this.lightOn);
 
     this.group.appendChild(this.lightOn);
@@ -618,14 +617,14 @@ class Touch {
   }
 }
 
-class Slider {
-  constructor(x, y, w, h, channel, value) {
-    function makeRectPath(x, y, w, h, color) {
-      let path = new Rect(x, y, w, h).toPath();
-      path.setAttribute("fill", color);
-      return path;
-    }
+function makeRectPath(x, y, w, h, color) {
+  let path = new Rect(x, y, w, h).toPath();
+  path.setAttribute("fill", color);
+  return path;
+}
 
+class Slideable {
+  constructor(x, y, w, h, channel, value) {
     var that = this;
     this.channel = channel;
     this.value = value;
@@ -636,26 +635,7 @@ class Slider {
     this.group = createElement("g");
     this.group.setAttribute("transform", translation);
 
-    this.frameColor = "#333333";
-    this.frameActiveColor = "#666666";
-    this.frame = rect.inset(0.625, 0.625).toPath();
-    this.frame.setAttribute("stroke", this.frameColor);
-    this.frame.setAttribute("stroke-width", "1.25");
-    this.group.appendChild(this.frame);
-
-    this.handleX = 1.875;
-    this.handleW = w - 3.75;
-    this.handleH = 10;
-    this.handleMinY = 2.875;
-    this.handleMaxY = h - 3.75 - this.handleH;
-
-    this.handle = createElement("g");
-    this.handle.appendChild(makeRectPath(0, 0, this.handleW, this.handleH, "#333333"));
-    this.handle.appendChild(makeRectPath(0, 0, this.handleW, 1.875, "#444444"));
-    this.handle.appendChild(makeRectPath(0, 4.375, this.handleW, 0.625, "#222222"));
-    this.handle.appendChild(makeRectPath(0, 5, this.handleW, 0.625, "#444444"));
-    this.handle.appendChild(makeRectPath(0, 8.175, this.handleW, 1.875, "#222222"));
-    this.group.appendChild(this.handle);
+    this.populate(rect);
 
     this.setValue(value);
 
@@ -784,6 +764,67 @@ class Slider {
   }
 }
 
+class Slider extends Slideable {
+  constructor(x, y, w, h, channel, value) {
+    super(x, y, w, h, channel, value);
+  }
+
+  populate(rect) {
+    this.frameColor = Colors.BLACK_PLASTIC;
+    this.frameActiveColor = Colors.BLACK_PLASTIC_ACTIVE;
+    this.frame = rect.inset(0.625, 0.625).toPath();
+    this.frame.setAttribute("stroke", this.frameColor);
+    this.frame.setAttribute("stroke-width", "1.25");
+    this.group.appendChild(this.frame);
+
+    this.handleX = 1.875;
+    this.handleW = rect.w - 3.75;
+    this.handleH = 10;
+    this.handleMinY = 2.875;
+    this.handleMaxY = rect.h - 3.75 - this.handleH;
+
+    this.handle = createElement("g");
+    this.handle.appendChild(makeRectPath(0, 0, this.handleW, this.handleH, Colors.BLACK_PLASTIC));
+    this.handle.appendChild(makeRectPath(0, 0, this.handleW, 1.875, Colors.BLACK_PLASTIC_LIGHT));
+    this.handle.appendChild(makeRectPath(0, 4.375, this.handleW, 0.625, Colors.BLACK_PLASTIC_SHADE));
+    this.handle.appendChild(makeRectPath(0, 5, this.handleW, 0.625, Colors.BLACK_PLASTIC_LIGHT));
+    this.handle.appendChild(makeRectPath(0, 8.175, this.handleW, 1.875, Colors.BLACK_PLASTIC_SHADE));
+    this.group.appendChild(this.handle);
+  }
+}
+
+class Wheel extends Slideable {
+  constructor(x, y, w, h, channel, value, autocenter = false) {
+    super(x, y, w, h, channel, value);
+    this.autocenter = autocenter;
+    console.log(`constructing Wheel(${x},${y},${w},${h}, ${channel},${value}, ${autocenter})`)
+  }
+
+  populate(rect) {
+    this.frameColor = Colors.BLACK_PLASTIC;
+    this.frameActiveColor = Colors.BLACK_PLASTIC_ACTIVE;
+    this.frame = rect.inset(0.625, 0.625).toPath();
+    this.frame.setAttribute("stroke", this.frameColor);
+    this.frame.setAttribute("stroke-width", "1.25");
+    this.group.appendChild(this.frame);
+
+    let body = makeRectPath(3, 5, rect.w - 6, rect.h - 10, Colors.WHITE);
+    this.group.appendChild(body);
+
+    this.handleX = 3;
+    this.handleW = rect.w - 6
+    this.handleH = 10;
+    this.handleMinY = 5;
+    this.handleMaxY = rect.h - 5 - this.handleH;
+
+    this.handle = createElement("g");
+    this.handle.appendChild(makeRectPath(0, 0, this.handleW, 3, Colors.BLACK_PLASTIC_SHADE));
+    this.handle.appendChild(makeRectPath(0, 3, this.handleW, 4, Colors.BLACK_PLASTIC));
+    this.handle.appendChild(makeRectPath(0, 7, this.handleW, 3, Colors.BLACK_PLASTIC_LIGHT));
+    this.group.appendChild(this.handle);
+  }
+}
+
 class Connector {
   constructor(serverUrl, keyboard, version) {
     this.serverUrl = serverUrl;
@@ -816,7 +857,7 @@ class Connector {
   showMessage(message) {
     this.serverMessage = message;
     this.messageText.replaceChildren(document.createTextNode(message));
-    if (message.length == 0) {
+    if (message != null && message.length == 0) {
       hideElement(this.messageBox);
     } else {
       showElement(this.messageBox);
@@ -977,6 +1018,20 @@ class Connector {
     return slider;
   }
 
+  addWheel(x, y, w, h, channel, value, autocenter = false) {
+    var that = this;
+    var wheel = new Wheel(x, y, w, h, channel, value, autocenter);
+
+    this.mainContainer.appendChild(wheel.group);
+    this.analogControls[channel] = wheel;
+
+    wheel.onValueChanged = function(s) {
+      that.onAnalogValueChanged(s);
+    }
+
+    return wheel;
+  }
+
   addRectangle(x, y, w, h, color) {
     let rectangle = createElement("rect");
     rectangle.setAttribute("x", x);
@@ -987,28 +1042,47 @@ class Connector {
     this.decorationsContainer.appendChild(rectangle);
   }
 
-  addSymbol(x, y, w, h, symbolName) {
-    let path = createElement("path")
-    path.setAttribute("stroke", "none");
-    path.setAttribute("fill", "#ffffff");
-    if (symbolName == 'triangle_up') {
-      path.setAttribute("d", `M${x} ${y+h}h${w}l${-w/2} ${-h}z`);
-    } else if (symbolName == 'triangle_down') {
-      path.setAttribute("d", `M${x} ${y}h${w}l${-w/2} ${h}z`);
-    }
-    this.decorationsContainer.appendChild(path);
+  makeFilledPath(path, color) {
+    let element = createElement("path")
+    element.setAttribute("stroke", "none");
+    element.setAttribute("fill", color);
+    element.setAttribute("d", path);
+    return element;
   }
 
-  selectView(view) {
-    var oldDisplay = null
-    if (typeof(this.display) !== 'undefined') {
-      oldDisplay = this.display;
+  addFilledPath(path, color) {
+    this.decorationsContainer.appendChild(this.makeFilledPath(path, color));
+  }
+
+  addSymbol(x, y, w, h, symbolName) {
+    if (symbolName == 'triangle_up') {
+      this.addFilledPath(`M${x} ${y+h}h${w}l${-w/2} ${-h}z`, Colors.SYMBOL);
+    } else if (symbolName == 'triangle_down') {
+      this.addFilledPath(`M${x} ${y}h${w}l${-w/2} ${h}z`, Colors.SYMBOL);
+    } else if (symbolName == "logo") {
+      let rect = new Rect(x, y, w, h).inset(0.5, 0.5).toPath(1.0);
+      rect.setAttribute("name", "LOGO");
+      rect.setAttribute("fill", "none");
+      rect.setAttribute("stroke", Colors.SYMBOL);
+      rect.setAttribute("stroke-width", "1");
+      this.decorationsContainer.appendChild(rect);
+      console.log(`Adding Logo:`);
+      console.log(rect);
     }
+  }
+ 
+  selectView(view) {
+    var oldDisplay = this.display;
+    var oldLights = this.lights;
 
     this.populate(this.keyboard, view);
 
-    if (oldDisplay !== null
-      && typeof(this.display) !== 'undefined' 
+    if (this.serverMessage != null) {
+      this.showMessage(this.serverMessage);
+    }
+
+    if (oldDisplay != null
+      && this.display != null 
       && this.display.cells.length == oldDisplay.cells.length 
       && this.display.cells[0].length == oldDisplay.cells[0].length) {
       for (let row = 0; row < oldDisplay.cells.length; row++) {
@@ -1017,6 +1091,17 @@ class Connector {
           const c = cellrow[col];
           this.display.setChar(row, col, c.char, c.underline, c.blink);
         }
+      }
+    }
+
+    if (oldLights != null && this.lights != null) {
+      for (let i = 0; i < this.lights.length; i++) {
+        this.lights[i].state = oldLights[i].state;
+        this.lights[i].blinkPhase = oldLights[i].blinkPhase;
+        this.lights[i].isOn = null; //  != true and != false!
+        this.lights[i].update(); // this calculates what .isOn should be and compares
+                                 // by setting isOn to null, that will always differ,
+                                 // and thus the update will always happen.
       }
     }
   }
@@ -1058,6 +1143,7 @@ class Connector {
 
     var hasSeq = false;
     var isSd1 = false;
+    var isSd132 = false
 
     keyboard = keyboard.toLowerCase();
     if (keyboard.indexOf('sd') != -1) {
@@ -1065,10 +1151,13 @@ class Connector {
 
       if (keyboard.indexOf('1') != -1) {
         isSd1 = true;
+        if (keyboard.indexOf('32') != -1) {
+          isSd132 = true;
+        }
       }
     }
 
-    this.populateView(this.view, hasSeq, isSd1);
+    this.populateView(this.view, hasSeq, isSd1, isSd132);
 
     let messageRect = Rect.from(this.displayContainer);
 

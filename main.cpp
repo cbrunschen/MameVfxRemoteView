@@ -508,7 +508,7 @@ struct Server : Connected {
 
   std::function<void(char)> handle_websocket_display_char;
   std::function<void(void)> handle_send_contents;
-
+  
   void handle_server_info(const std::string_view &message) {
     // try to parse this as server info
     // std::cerr << std::format("Maybe Server info: '{}' ({})\r\n", message, message.size());
@@ -544,11 +544,11 @@ struct Server : Connected {
           break;
 
         case 'A': // an Analog value;
-          L(std::cerr << "Ignoring Analog '" << std::string_view(data, data_len) << "'" << std::endl);
+          send_to_all_clients(data, data_len);
           break;
 
         case 'B': // a Button is being pressed or released
-          L(std::cerr << "Ignoring Button '" << std::string_view(data, data_len) << "'" << std::endl);
+          send_to_all_clients(data, data_len);
           break;
 
         case 'I': // server Information
