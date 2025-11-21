@@ -3,44 +3,47 @@
 from textwrap import indent, dedent, wrap
 from dataclasses import dataclass, field
 from sys import argv, exit
-from argparse import ArgumentParser
+from argparse import ArgumentParser, BooleanOptionalAction
 
 from view import *
 from view_builders import *
 from mame_layout import *
 from js_html import *
 from colors import colors, colors_by_name
-from util import DEBUG
+import util
 
 def main():
   parser = ArgumentParser()
   group = parser.add_mutually_exclusive_group()
   group.add_argument('-l', '--layout', choices=['vfx','vfxsd','sd1','sd132'])
   group.add_argument('-js', '--javascript', action='store_true')
-  parser.add_argument('-io', '--io_port_prefix', type=str, default="")
-  parser.add_argument('-rl', '--real_logos', action='store_true', default=False)
-
+  parser.add_argument('-io', '--io-port-prefix', type=str, default="")
+  parser.add_argument('-rl', '--real-logos', action=BooleanOptionalAction, default=False)
+  parser.add_argument('-f', '--fonts', action=BooleanOptionalAction, default=False)
+  parser.add_argument('-hc', '--hexcolors', action=BooleanOptionalAction, default=False)
+  parser.add_argument('-st', '--stretch-text', action=BooleanOptionalAction, default=False)
   parser.add_argument('--debug', action='store_true', default=False)
   # parser.add_argument('-fs', '--fontsize', default=1.4)
 
   args = parser.parse_args()
-  DEBUG = args.debug
+  util.DEBUG = args.debug
 
   visitor = None
   if args.javascript:
     visitor = HTMLJSVisitor()
   elif args.layout:
-    visitor = MameLayoutVisitor(args.layout, args.io_port_prefix)
+    visitor = MameLayoutVisitor(args.layout, args.io_port_prefix, fonts=args.fonts, hexcolors=args.hexcolors, stretch_text=args.stretch_text)
   
   views = {
-    'panel': PanelBuilder,
-    'square_panel': SquarePanelBuilder,
-    'full': FullViewBuilder,
+    'Full': FullViewBuilder,
+    'Compact': CompactViewBuilder,
+    'Panel': PanelViewBuilder,
+    'Tablet': TabletViewBuilder,
   }
   
   if visitor:
-    for builder_class in views.values():
-      builder = builder_class(visitor.defaultFontSize())
+    for name, builder_class in views.items():
+      builder = builder_class(name, visitor.defaultFontSize())
       visitor.visitView(builder.withRealLogos(args.real_logos).build())
     print(visitor)
   else:

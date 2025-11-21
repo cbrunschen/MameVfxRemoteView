@@ -35,7 +35,7 @@
 #define HTML "View.html"
 #define JS "View.js"
 
-#define DEBUG 0
+#define DEBUG 2
 #if DEBUG
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #define LOG_FUNCTION do { LOG("%s(), state = %d\r\n", __func__, m_mame_connection_state); } while(0)
@@ -380,13 +380,12 @@ struct Display {
       // move cursor to position
       row = ((c & 0x7f) >= 40) ? 1 : 0;
       col = (c & 0x7f) % 40;
-      attr = attrs[row][col];
       LOGD("%02x: -> (%d, %d)\r\n", c, row, col);
     } else if (0xd0 <= c) {
       // single-byte commands
       switch (c) {
         case 0xd0:  // blink start
-          LOGD("d1: blink\r\n");
+          LOGD("d0: blink\r\n");
           attr |= ATTR_BLINK;
           break;
 
@@ -420,6 +419,11 @@ struct Display {
         case 0xd6:  // clear screen
           LOGD("d6: clear screen\r\n");
           clear_screen();
+          break;
+        
+        case 0xe8:  // also cancel attributes
+          attr = 0;
+          LOGD("e8: cancel attributes (e8)\n");
           break;
 
         case 0xf5:  // save cursor position
@@ -459,7 +463,7 @@ struct Display {
       }
     } else if ((0x20 <= c) && (c < 0x7f)) {
       // a character to display
-      LOGD("[char %02x]\r\n", c);
+      LOGD("[char %02x] '%c' (attr %x)\r\n", c, c, attr);
       chars[row][col] = c;
       attrs[row][col] = attr;
 

@@ -1,33 +1,34 @@
 #!/usr/bin/env python
 
+from typing import overload, reveal_type
 from dataclasses import dataclass
 
 from myxml import *
 from util import *
 
 @dataclass
-class Offset:
+class Vector:
   x: float
   y: float
 
-  def __add__(self, o: 'Offset'):
-    return Offset(self.x + o.x, self.y + o.y)
+  def __add__(self, o: 'Vector'):
+    return Vector(self.x + o.x, self.y + o.y)
 
-  def __iadd__(self, o: 'Offset'):
+  def __iadd__(self, o: 'Vector'):
     self.x += o.x
     self.y += o.y
     return self
 
-  def __sub__(self, o: 'Offset'):
-    return Offset(self.x - o.x, self.y - o.y)
+  def __sub__(self, o: 'Vector'):
+    return Vector(self.x - o.x, self.y - o.y)
 
-  def __isub__(self, o: 'Offset'):
+  def __isub__(self, o: 'Vector'):
     self.x -= o.x
     self.y -= o.y
     return self
 
   def __str__(self):
-    return f'({self.x:.3g},{self.y:.3g})'
+    return f'({self.x:.5g},{self.y:.5g})'
 
 
 @dataclass
@@ -36,6 +37,14 @@ class Rect:
   y: float
   w: float
   h: float
+
+  @property
+  def origin(self):
+    return Vector(self.x, self.y)
+  
+  @property
+  def extent(self):
+    return Vector(self.w, self.h)
 
   def assign(self, r: 'Rect|None'):
     if r is not None and r.w > 0 and r.h > 0:
@@ -78,44 +87,25 @@ class Rect:
   def outset(self, dx, dy):
     return Rect(self.x - dx, self.y - dy, self.w + 2*dx, self.h + 2*dy)
   
-  def offset(self, a:float|Offset, b:float|None=None) -> 'Rect':
-    if isinstance(a, Offset):
-      o = a
-      if b is not None:
-        dprint(f"offset(:{type(a)}:{a},{type(b)}{b}) requires either two floats (dx,dy) or one Offset")
-        raise ValueError(f"offset({a},{b}) requires either two floats (dx,dy) or one Offset")
-      else:
-        return Rect(self.x + o.x, self.y + o.y, self.w, self.h)
-    elif b is not None:
-      dx = a
-      dy = b
-      return Rect(self.x+dx, self.y+dy, self.w, self.h)
+  @overload
+  def offset(self, a: float|int, b: float|int) -> 'Rect': ...
+
+  @overload
+  def offset(self, a: Vector) -> 'Rect': ...
+
+  def offset(self, a: float|int|Vector, b: float|int|None=None) -> 'Rect':
+    if isinstance(a, (float, int)) and isinstance(b, (float, int)):
+      return Rect(self.x + a, self.y + b, self.w, self.h)
+    elif isinstance(a, Vector) and b is None:
+      return Rect(self.x + a.x, self.y + a.y, self.w, self.h)
     else:
-      eprint(f"offset(:{type(a)}:{a},{type(b)}{b}) requires either two floats (dx,dy) or one Offset")
-      raise ValueError(f"offset({a},{b}) requires either two floats (dx,dy) or one Offset")
+      raise TypeError("Inconsistent arguments to offset(): aither an Offset, or two floats, please")
   
-  def __add__(self, a:float|Offset, b:float|None=None) -> 'Rect':
-    return self.offset(a, b)
+  def __add__(self, o: Vector) -> 'Rect':
+    return self.offset(o.x, o.y)
   
-  def toPath(self, r=None, fill=None, stroke=None):
-    rx = f"{r:.3g}" if r != None else None
-    return Element('rect', clean({
-      'x': f"{self.x:.3g}", 
-      'y': f"{self.y:.3g}", 
-      'width': f"{self.w:.3g}", 
-      'height': f"{self.h:.3g}",
-      'rx': rx,
-      'fill': fill,
-      'stroke': stroke,
-    }), [])
-  
-  def toElement(self, color=None):
-    return Element('rect', clean({
-      'x': f"{self.x:.3g}", 
-      'y': f"{self.y:.3g}", 
-      'width': f"{self.w:.3g}", 
-      'height': f"{self.h:.3g}",
-    }), [])
+  def __sub__(self, o: Vector) -> 'Rect':
+    return self.offset(-o.x, -o.y)
   
   def getX(self, d):
     return self.x + d * self.w
@@ -137,4 +127,4 @@ class Rect:
     return f'{self.x:.5g}, {self.y:.5g}, {self.w:.5g}, {self.h:.5g}'
 
   def __str__(self):
-    return f'({self.x:.3g},{self.y:.3g},{self.w:.3g},{self.h:.3g})'
+    return f'({self.x:.5g},{self.y:.5g},{self.w:.5g},{self.h:.5g})'

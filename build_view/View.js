@@ -1,6 +1,13 @@
+function standardize_color(color) {
+  var ctx = document.createElement('canvas').getContext('2d');
+  ctx.fillStyle = color;
+  return ctx.fillStyle;
+}
+
 Colors = {
 //COLORS//
 };
+
 
 LabelPosition = {
   ABOVE: 1,
@@ -19,13 +26,6 @@ DisplayBlinkState = {
   UNDERLINE: 1,
   CHAR: 2
 };
-
-Keyboard = {
-  VFX: 'VFX',
-  VFX_SD: 'VFX-SD',
-  SD1: 'SD-1',
-  SD1_32: 'SD-1/32'
-}
 
 segmentPaths = [
   "M1053 705 c-43 19 -57 47 -43 89 23 70 87 106 189 106 38 0 70 8 106 25 79 39 111 41 183 11 80 -34 119 -33 205 6 68 31 78 33 192 33 116 0 123 -1 195 -35 67 -31 87 -35 182 -40 101 -5 108 -7 137 -34 40 -38 50 -89 25 -118 -11 -11 -37 -29 -59 -39 -37 -17 -79 -19 -660 -18 -505 0 -626 2 -652 14z",
@@ -455,8 +455,6 @@ class PatchSelectButton {
   }
 
   press(e) {
-    e.preventDefault();
-
     if (!this.isPressed) {
       this.isPressed = true;
       this.showPressed(true);
@@ -465,13 +463,9 @@ class PatchSelectButton {
         this.onPress(this);
       }
     }
-
-    return false;
   }
 
   release(e) {
-    e.preventDefault();
-
     if (this.isPressed) {
       this.isPressed = false;
       this.showPressed(false);
@@ -480,8 +474,6 @@ class PatchSelectButton {
         this.onRelease(this);
       }
     }
-
-    return false;
   }
 }
 
@@ -510,11 +502,11 @@ class Button {
     this.value = number;
     this.color = color;
 
-    this.group.addEventListener("touchstart", function(e) { that.press(e); }, true);
-    this.group.addEventListener("touchend", function(e) { that.release(e); }, true);
     this.group.addEventListener("mousedown", function(e) { that.press(e); }, true);
     this.group.addEventListener("mouseout", function(e) { that.release(e); }, true);
     this.group.addEventListener("mouseup", function(e) { that.release(e); }, true);
+
+    this.group.setAttribute("class", "button");
 
     this.isPressed = false;
 
@@ -535,33 +527,31 @@ class Button {
   }
 
   press(e) {
-    e.preventDefault();
-
     if (!this.isPressed) {
+      console.log(`Button ${this.value} Press`)
       this.isPressed = true;
       this.showPressed(true);
 
       if (this.onPress != undefined) {
         this.onPress(this);
       }
+    } else {
+      console.log(`Button ${this.value} Repeat Press`)
     }
-
-    return false;
   }
 
   release(e) {
-    e.preventDefault();
-
     if (this.isPressed) {
+      console.log(`Button ${this.value} Release`)
       this.isPressed = false;
       this.showPressed(false);
 
       if (this.onRelease != undefined) {
         this.onRelease(this);
       }
+    } else {
+      console.log(`Button ${this.value} Repeat Release`)
     }
-
-    return false;
   }
 }
 
@@ -574,7 +564,7 @@ class Light {
     this.isOn = false;
     this.blinkPhase = 0;
 
-    this.group = createElement("g")
+    this.group = createElement("g");
 
     this.lightOn = this.rect.toPath();
     this.lightOff = this.lightOn.cloneNode(true);
@@ -606,14 +596,190 @@ class Light {
   }
 }
 
-class Touch {
+class TouchPoint {
   constructor(x, y) {
     this.x = x;
     this.y = y;
   }
 
-  static makeTouch(e) {
-    return new Touch(e.clientX, e.clientY);
+  static center(touches) {
+    console.log(`TouchPoint.center(${touches}) of ${touches.size} touches:`)
+    var n = touches.size;
+    if (n <= 0) {
+      return null;
+    }
+    var x = 0;
+    var y = 0;
+
+    for (var touch of touches.values()) {
+      console.log(`   (${touch.clientX}, ${touch.clientY})`)
+      x += touch.clientX;
+      y += touch.clientY;
+    }
+
+    console.log(`=> (${x / n}, ${y / n})`)
+
+    return new TouchPoint(x / n, y / n);
+  }
+}
+
+class Key {
+  constructor(x, y, number, black, path) {
+    this.x = x;
+    this.y = y;
+    this.number = number;
+    this.black = black;
+    this.path = path;
+
+    this.velocity = 0;
+    this.pressure = 0;
+
+    var translation = "translate(" + x + "," + y + ")";
+    this.element = createElement("path");
+    this.element.setAttribute("transform", translation);
+    this.element.setAttribute("class", "key");
+    this.element.setAttribute("d", path);
+    if (this.black) {
+      this.color = Colors.KEY_BLACK;
+      this.color_velocity_min = Colors.KEY_BLACK_VELOCITY_MIN;
+      this.color_velocity_max = Colors.KEY_BLACK_VELOCITY_MAX;
+      this.color_pressure_min = Colors.KEY_BLACK_PRESSURE_MIN;
+      this.color_pressure_max = Colors.KEY_BLACK_PRESSURE_MAX;
+    } else {
+      this.color = Colors.KEY_WHITE;
+      this.color_velocity_min = Colors.KEY_WHITE_VELOCITY_MIN;
+      this.color_velocity_max = Colors.KEY_WHITE_VELOCITY_MAX;
+      this.color_pressure_min = Colors.KEY_WHITE_PRESSURE_MIN;
+      this.color_pressure_max = Colors.KEY_WHITE_PRESSURE_MAX;
+    }
+    this.element.setAttribute("fill", this.color);
+
+    let that = this;
+    this.element.addEventListener("touchstart", function(e) { that.touchstart(e); }, true);
+    this.element.addEventListener("touchmove", function(e) { that.touchmove(e); }, true);
+    this.element.addEventListener("touchend", function(e) { that.touchend(e); }, true);
+    this.element.addEventListener("touchcancel", function(e) { that.touchend(e); }, true);
+
+    this.element.addEventListener(
+      "mousedown", 
+      function(e) { that.grab(e); },
+      { capture: false, passive: false }
+    );
+    this.element.addEventListener(
+      "mouseenter", 
+      function(e) { that.drag(e); },
+      { capture: false, passive: true }
+    );
+    this.element.addEventListener(
+      "mousemove", 
+      function(e) { that.drag(e); },
+      { capture: false, passive: true }
+    );
+    this.element.addEventListener(
+      "mouseup",
+      function(e) { that.release(); },
+      { capture: false, passive: true }
+    );
+    this.element.addEventListener(
+      "mouseleave",
+      function(e) { that.release(); },
+      { capture: false, passive: true }
+    );
+  }
+
+  updateColor() {
+    if (this.pressure > 0) {
+      let map = 100.0 * (this.pressure / 127.0);
+      let mip = 100.0 - map; 
+      this.element.setAttribute("fill", 
+        `color-mix(in srgb, ${this.color_pressure_min} ${mip}%, ${this.color_pressure_max} ${map}%)`);
+    } else if (this.velocity > 0) {
+      let map = 100.0 * ((this.velocity - 1) / 126.0);
+      let mip = 100.0 - map; 
+      this.element.setAttribute("fill", 
+        `color-mix(in srgb, ${this.color_velocity_min} ${mip}%, ${this.color_velocity_max} ${map}%)`);
+    } else {
+      this.element.setAttribute("fill", this.color);
+    }
+  }
+
+  grab(e) {
+    if (this.velocity == 0) {
+      // first touch/mouse down
+      this.velocity = 64;
+      this.updateColor();
+    } else {
+      // subsequent multi-touch added or removed
+      this.updateColor();
+    }
+    // console.log("Grabbing with handleY=" + this.handleY + ", p.y=" + p.y + " => dragOffset=" + this.dragOffset);
+  }
+
+  drag(e) {
+    if (e.buttons != 0) {
+      if (this.velocity == 0) {
+        this.grab(e);
+      } else {
+        this.pressure = 64;this
+        this.updateColor();
+      }
+    }
+  }
+
+  release(e) {
+    this.pressure = 0;
+    this.velocity = 0;
+    this.updateColor();
+  }
+
+  touchstart(e) {
+    e.preventDefault();
+    
+    for (var i = 0; i < e.targetTouches.length; i++) {
+      var touch = e.targetTouches.item(i);
+      this.activeTouches.set(touch.identifier, touch);
+    }
+
+    center = TouchPoint.center(this.activeTouches);
+    if (center != null) {
+      this.grab(center.x, center.y);
+    }
+  }
+
+  touchmove(e) {
+    e.preventDefault();
+    
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var touch = e.changedTouches.item(i);
+      if (this.activeTouches.has(touch.identifier)) {
+        this.activeTouches.set(touch.identifier, touch);
+      }
+    }
+    center = TouchPoint.center(this.activeTouches);
+    if (center != null) {
+      this.drag(center.x, center.y);
+    }
+  }
+
+  touchend(e) {
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var touch = e.changedTouches.item(i);
+      this.activeTouches.delete(touch.identifier)
+    }
+    if (this.activeTouches.size == 0) {
+      this.release();
+    } else {
+      center = TouchPoint.center(this.activeTouches);
+      if (center != null) {
+        this.grab(center.x, center.y);
+      }
+    }
+  }
+}
+
+class Keyboard {
+  constructor(x, y, w, h, keys) {
+    
   }
 }
 
@@ -625,7 +791,6 @@ function makeRectPath(x, y, w, h, color) {
 
 class Slideable {
   constructor(x, y, w, h, channel, value) {
-    var that = this;
     this.channel = channel;
     this.value = value;
 
@@ -634,23 +799,142 @@ class Slideable {
     var translation = "translate(" + x + "," + y + ")";
     this.group = createElement("g");
     this.group.setAttribute("transform", translation);
+    this.group.setAttribute("class", "slider");
 
     this.populate(rect);
 
     this.setValue(value);
-
-    this.handle.addEventListener("touchstart", function(e) { that.touchstart(e); }, true);
-    this.group.addEventListener("touchmove", function(e) { that.touchmove(e); }, true);
-    this.group.addEventListener("touchend", function(e) { that.touchend(e); }, true);
-    this.group.addEventListener("touchcancel", function(e) { that.touchend(e); }, true);
-
-    this.handle.addEventListener("mousedown", function(e) { that.grab(e.clientX, e.clientY); }, true);
-    this.group.addEventListener("mousemove", function(e) { that.drag(e.clientX, e.clientY); }, true);
-    this.group.addEventListener("mouseup", function(e) { that.release(); }, true);
-
     this.onValueChanged = undefined;
     this.isGrabbed = false;
     this.activeTouches = new Map();
+
+    // Bind the gesture handlers to this instance.
+    this.gestureStart = this.gestureStart.bind(this);
+    this.gestureMove = this.gestureMove.bind(this);
+    this.gestureEnd = this.gestureEnd.bind(this);
+    this.gestureCancel = this.gestureCancel.bind(this);
+
+    // Now set the event handlers:
+    // Check if pointer events are supported.
+    // if (window.PointerEvent) {
+    //   console.log("Adding Pointer Event handlers");
+    //   // Pointer events are supported, use those.
+    //   // Add Pointer Event Listener
+    //   this.handle.addEventListener('pointerdown', this.gestureStart, { capture: true, passive: false });
+    //   this.handle.addEventListener('pointermove', this.gestureMove, { capture: true, passive: false });
+    //   this.handle.addEventListener('pointerup', this.gestureEnd, { capture: true, passive: false });
+    //   this.handle.addEventListener('pointercancel', this.gestureCancel, { capture: true, passive: false });
+    // } else {
+      console.log("Adding Touch and Mouse Event handlers");
+      // Pointer events are _not_ supported, use touch and mouse events instead.
+      // Add Touch Listener
+      this.handle.addEventListener('touchstart', this.gestureStart, { capture: true, passive: false });
+      this.handle.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
+      this.handle.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
+      this.handle.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
+      this.group.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
+      this.group.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
+      this.group.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
+
+      // Add Mouse Listener
+      this.handle.addEventListener('mousedown', this.gestureStart, { capture: true, passive: false });
+    // }
+  }
+
+  gestureStart(e) {
+    console.log(`gestureStart(${e})`)
+    e.preventDefault();
+
+    let first = (e.touches == null) || (e.touches.length == 1);
+
+    if (first) {
+      // Add the move and end listeners
+      // if (window.PointerEvent) {
+      //   e.target.setPointerCapture(e.pointerId);
+      //   console.log(`- capturing pointer ${e.pointerId}`)
+      // } else {
+        // Add Mouse Listeners
+        document.addEventListener('mousemove', this.gestureMove, true);
+        document.addEventListener('mouseup', this.gestureEnd, true);
+      // }
+    }
+
+    if (e.touches) {
+      for (var i = 0; i < e.targetTouches.length; i++) {
+        var touch = e.targetTouches.item(i);
+        this.activeTouches.set(touch.identifier, touch);
+      }
+
+      let center = TouchPoint.center(this.activeTouches);
+      if (center != null) {
+        this.grab(center.x, center.y);
+      }
+    } else {
+      this.grab(e.clientX, e.clientY);
+    }
+  }
+
+  gestureMove(e) {
+    console.log(`gestureMove(${e})`)
+    e.preventDefault();
+
+    if (e.touches) {
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        var touch = e.changedTouches.item(i);
+        if (this.activeTouches.has(touch.identifier)) {
+          this.activeTouches.set(touch.identifier, touch);
+        }
+      }
+      let center = TouchPoint.center(this.activeTouches);
+      if (center != null) {
+        this.drag(center.x, center.y);
+      }
+    } else {
+      this.drag(e.clientX, e.clientY);
+    }
+  }
+
+  gestureEnd(e) {
+    console.log(`gestureEnd(${e})`)
+    e.preventDefault();
+
+    let last = (e.touches == null) || (e.touches.length == 0);
+
+    if (last) {
+      // Remove Event Listeners
+      // if (window.PointerEvent) {
+      //   console.log(`- releasing pointer ${e.pointerId}`)
+      //   e.target.releasePointerCapture(e.pointerId);
+      // } else {
+        // Remove Mouse Listeners
+        document.removeEventListener('mousemove', this.gestureMove, true);
+        document.removeEventListener('mouseup', this.gestureEnd, true);
+      // }
+    }
+
+    if (e.touches) {
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        var touch = e.changedTouches.item(i);
+        this.activeTouches.delete(touch.identifier)
+      }
+      if (this.activeTouches.size > 0) {
+        let center = TouchPoint.center(this.activeTouches);
+        if (center != null) {
+          this.grab(center.x, center.y);
+        }
+      } else {
+        this.release();
+      }
+    } else {
+      this.release();
+    }
+  }
+
+  gestureCancel(e) {
+    console.log(`gestureCancel(${e})`)
+    e.preventDefault();
+
+    this.gestureEnd(e);
   }
 
   setValue(value) {
@@ -674,14 +958,14 @@ class Slideable {
     this.frame.setAttribute("stroke", this.frameActiveColor);
     var p = pointIn(this.group, x, y);
     this.dragOffset = p.y - this.handleY;
-    // console.log("Grabbing with handleY=" + this.handleY + ", p.y=" + p.y + " => dragOffset=" + this.dragOffset);
+    console.log("Grabbing with handleY=" + this.handleY + ", p.y=" + p.y + " => dragOffset=" + this.dragOffset);
   }
 
   drag(x, y) {
     if (this.isGrabbed) {
       var p = pointIn(this.group, x, y);
       var newHandleY = p.y - this.dragOffset;
-      // console.log("Dragged with p.y=" + p.y + ", dragOffset=" + this.dragOffset + " => new handleY=" + newHandleY);
+      console.log("Dragged with p.y=" + p.y + ", dragOffset=" + this.dragOffset + " => new handleY=" + newHandleY);
       this.setHandleY(newHandleY);
       if (this.onValueChanged != null) {
         this.onValueChanged(this);
@@ -692,75 +976,6 @@ class Slideable {
   release(e) {
     this.isGrabbed = false;
     this.frame.setAttribute("stroke", this.frameColor);
-  }
-
-  activeTouchCenter() {
-    var n = this.activeTouches.size;
-    if (n <= 0) {
-      return undefined;
-    }
-    var x = 0;
-    var y = 0;
-
-    for (var touch of this.activeTouches.values()) {
-      x += touch.x;
-      y += touch.y;
-    }
-
-    return new Touch(x / n, y / n);
-  }
-
-  touchstart(e) {
-    e.preventDefault();
-
-    var wasEmpty = this.activeTouches.size == 0;
-    for (var i = 0; i < e.targetTouches.length; i++) {
-      var touch = e.targetTouches.item(i);
-      this.activeTouches.set(touch.identifier, makeTouch(touch));
-    }
-
-    center = this.activeTouchCenter();
-    if (center != null) {
-      this.grab(center.x, center.y);
-    }
-
-    return false;
-  }
-
-  touchmove(e) {
-    e.preventDefault();
-
-    for (var i = 0; i < e.changedTouches.length; i++) {
-      var touch = e.changedTouches.item(i);
-      if (this.activeTouches.has(touch.identifier)) {
-        this.activeTouches.set(touch.identifier, makeTouch(touch));
-      }
-    }
-    center = this.activeTouchCenter();
-    if (center != null) {
-      this.drag(center.x, center.y);
-    }
-
-    return false;
-  }
-
-  touchend(e) {
-    e.preventDefault();
-
-    for (var i = 0; i < e.changedTouches.length; i++) {
-      var touch = e.changedTouches.item(i);
-      this.activeTouches.delete(touch.identifier)
-    }
-    if (this.activeTouches.size == 0) {
-      this.release();
-    } else {
-      center = this.activeTouchCenter();
-      if (center != null) {
-        this.grab(center.x, center.y);
-      }
-    }
-
-    return false;
   }
 }
 
@@ -828,6 +1043,9 @@ class Wheel extends Slideable {
     super.release(e)
     if (this.autocenter) {
       this.setValue(0.5);
+      if (this.onValueChanged) {
+        this.onValueChanged(this);
+      }
     }
   }
 }
@@ -976,9 +1194,12 @@ class Connector {
     return button;
   }
 
-  addLabel(x, y, w, h, label, fontSize, bold = false, italic = false, centered = False) {
+  addLabel(x, y, w, h, label, fontSize, bold = false, italic = false, centered = False, stretched = False, color = null) {
+    if (color == null) {
+      color = 'white'
+    }
     var labelText = createElement("text");
-    labelText.setAttribute('fill', 'white');
+    labelText.setAttribute('fill', color);
     labelText.setAttribute('stroke', 'none');
     labelText.setAttribute('font-size', fontSize);
     labelText.setAttribute('font-family', 'Helvetica');
@@ -988,10 +1209,15 @@ class Connector {
     if (italic) {
       labelText.setAttribute('font-style', 'italic');
     }
-    labelText.setAttribute('y', y + 0.7 * fontSize);
+    labelText.setAttribute('y', y);
+    labelText.setAttribute('dominant-baseline', 'text-before-edge');
     if (centered) {
       labelText.setAttribute('x', x + w/2);
       labelText.setAttribute('text-anchor', 'middle');
+    } else if (stretched) {
+      labelText.setAttribute('x', x);
+      labelText.setAttribute('textLength', w);
+      labelText.setAttribute('lengthAdjust', 'spacingAndGlyphs');
     } else {
       labelText.setAttribute('x', x);
     }
@@ -1019,7 +1245,7 @@ class Connector {
     this.analogControls[channel] = slider;
 
     slider.onValueChanged = function(s) {
-      that.onAnalogValueChanged(s);
+      that.onSliderChanged(s);
     }
 
     return slider;
@@ -1033,7 +1259,7 @@ class Connector {
     this.analogControls[channel] = wheel;
 
     wheel.onValueChanged = function(s) {
-      that.onAnalogValueChanged(s);
+      that.onWheelChanged(s);
     }
 
     return wheel;
@@ -1061,21 +1287,32 @@ class Connector {
     this.decorationsContainer.appendChild(this.makeFilledPath(path, color));
   }
 
-  addSymbol(x, y, w, h, symbolName) {
-    if (symbolName == 'triangle_up') {
-      this.addFilledPath(`M${x} ${y+h}h${w}l${-w/2} ${-h}z`, Colors.SYMBOL);
-    } else if (symbolName == 'triangle_down') {
-      this.addFilledPath(`M${x} ${y}h${w}l${-w/2} ${h}z`, Colors.SYMBOL);
-    } else if (symbolName == "logo") {
-      let rect = new Rect(x, y, w, h).inset(0.5, 0.5).toPath(1.0);
-      rect.setAttribute("name", "LOGO");
-      rect.setAttribute("fill", "none");
-      rect.setAttribute("stroke", Colors.SYMBOL);
-      rect.setAttribute("stroke-width", "1");
-      this.decorationsContainer.appendChild(rect);
-      console.log(`Adding Logo:`);
-      console.log(rect);
+  addKey(x, y, w, h, keyNumber, black, path) {
+    let key = new Key(x, y, keyNumber, black, path)
+    this.mainContainer.appendChild(key.element);
+  }
+
+  addDrawing(x, y, w, h, viewBox, contents) {
+    const svg = createElement("svg");
+    svg.setAttribute("x", x);
+    svg.setAttribute("y", y);
+    svg.setAttribute("width", w);
+    svg.setAttribute("height", h);
+    svg.setAttribute("viewBox", viewBox);
+    svg.setAttribute("preserveAspectRatio", "none");
+
+    for (var i = 0; i < contents.length; i++) {
+      const part = contents[i];
+      const element = createElement(part.tag);
+      for (const [k, v] of Object.entries(part)) {
+        if (k != 'tag') {
+          element.setAttribute(k, v);
+        }
+      }
+
+      svg.appendChild(element);
     }
+    this.decorationsContainer.appendChild(svg);
   }
  
   selectView(view) {
@@ -1236,14 +1473,22 @@ class Connector {
     this.sendString("BU " + button.value);
   }
 
-  onAnalogValueChanged(slider) {
+  onSliderChanged(slider) {
     // 0.05 == 0; 0.95 == 760
     var value = (slider.value - 0.05) / 0.9;
     value = 760 * value;
     value = Math.round(Math.max(0, Math.min(1023, value)));
     var s = "A " + slider.channel + " " + value;
 
-    console.log(`sending analog value: ${s}`);
+    console.log(`sending slider value: ${s}`);
+    this.sendString(s);
+  }
+
+  onWheelChanged(wheel) {
+    let value = Math.round(Math.max(0, Math.min(1023, 1023 * (1.0 - wheel.value))));
+    var s = "A " + wheel.channel + " " + value;
+
+    console.log(`sending wheel value: ${s}`);
     this.sendString(s);
   }
 

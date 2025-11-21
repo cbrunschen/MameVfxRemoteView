@@ -56,15 +56,14 @@ class Color:
       return colors_by_name[name]
     eprint(f"!!! Unknown color '{name}' !!!")
     raise ValueError(f"!!! Unknown color '{name}' !!!")
-    return Color(name, '#ff10f0')
 
   @staticmethod
   def for_hex(hexrgb: str):
     if hexrgb in colors_by_value:
       return colors_by_value[hexrgb]
+    hexrgb = hexrgb.lower()
     eprint(f"!! Unknown color with hex '{hexrgb} !!!")
-    raise ValueError(f"!! Unknown color with hex '{hexrgb} !!!")
-    return Color(f"Unknown_{hexrgb.removeprefix('#')}", hexrgb)
+    return Color(hexrgb, hexrgb)
 
 Color('vfx', '#299ca3')
 Color('sd1', '#db5f6a')
@@ -72,29 +71,42 @@ Color('transparent', '#00000000')
 Color('white', '#ffffff')
 Color('black', '#000000')
 
-Color('panel', '#222222')
+Color('panel', '#333333')
 Color('glass', 'black')
+Color('screwhead', '#383838')
 
-Color('body', '#080808')
-Color('body_down', '#040404')
-Color('body_up', '#0c0c0c')
+Color('body', '#202020')
+Color('body_down', '#101010')
+Color('body_down_shallow', '#181818')
+Color('body_up', '#303030')
+Color('body_up_shallow', '#282828')
 
 Color('key_white', '#f2f2e6')
-Color('key_white_active', '#f2f2e6')
+Color('key_white_velocity_min', "#2c44ad")
+Color('key_white_velocity_max', "#19a14d")
+Color('key_white_pressure_min', "#e6ce48")
+Color('key_white_pressure_max', "#ce3f06")
 Color('key_black', '#141414')
-Color('key_black_active', '#4c4c99')
+Color('key_black_velocity_min', "#2c44ad")
+Color('key_black_velocity_max', "#19a14d")
+Color('key_black_pressure_min', "#e6ce48")
+Color('key_black_pressure_max', "#ce3f06")
+Color('keyboard_background', '#555555')
 
 Color('light_off', '#112211')
 Color('light_on', '#22ff22')
 
-Color('black_plastic', '#333333')
-Color('black_plastic_active', '#666666')
-Color('black_plastic_light', '#444444')
-Color('black_plastic_shade', '#222222')
+Color('black_plastic', '#444444')
+Color('black_plastic_active', '#777777')
+Color('black_plastic_light', '#555555')
+Color('black_plastic_shade', '#333333')
+Color('black_plastic_dark', '#2a2a2a')
+Color('black_plastic_darker', '#222222')
 
 Color('button_light', '#bbbbbb')
 Color('button_medium', '#777777')
-Color('button_dark', '#333333')
+Color('button_dark', '#111111')
+Color('button_screen', '#2a2a2a') # a bit lighter for contrast against the glass
 
 Color('button_pressed', 'white')
 
@@ -104,6 +116,9 @@ Color('vfd_on', '#73fff2')
 Color('halo', '#666666')
 Color('text', 'white')
 Color('symbol', 'white')
+
+Color('plugin_warning', '#bb2c2c')
+Color('plugin_warning_background', '#b2b2b2')
 
 
 def get_color(s):
@@ -115,3 +130,14 @@ def color_name(s):
   if s in colors_by_value:
     return colors_by_value[s]
   return s.removeprefix('#')
+
+def hex_for_color(color: str|Color) -> str:
+  if isinstance(color, str):
+    if color.startswith("#"):
+      return color
+    else:
+      return Color.get(color).hex
+  elif isinstance(color, Color):
+    return color.hex
+  else:
+    return color

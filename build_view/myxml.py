@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from textwrap import indent
+from typing import Sequence
 
 @dataclass
 class Document:
@@ -16,14 +17,20 @@ class Element:
   attrs: dict[str, str] = field(default_factory=dict)
   children: list['Element|CDATA|Space|Comment'] = field(default_factory=list)
 
+  def __post_init__(self):
+    # Make sure we have our own copies.
+    self.attrs = self.attrs.copy()
+    self.children = self.children.copy()
+
   def append(self, i):
     if (i == self):
       raise Exception(f"{self.tag}: Appending self")
     self.children.append(i)
   
-  def extend(self, l):
+  def extend(self, l: Sequence['Element|CDATA|Space|Comment']):
     for i in l:
       self.append(i)
+    return self
   
   def __str__(self):
     items = [ f'<{self.tag}' ]
@@ -46,7 +53,7 @@ class CDATA:
 
   def __str__(self):
     parts = self.contents.split(']]>')
-    escaped = ']]>]]><[CDATA['.join(parts)
+    escaped = ']]>]]><[CDATA['.join(parts).strip()
     return f'<![CDATA[\n{indent(escaped, '\t')}\n]]>'
 
 @dataclass

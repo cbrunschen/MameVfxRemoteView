@@ -3,6 +3,28 @@
 	<title>Front Panel</title>
 
   <meta charset="UTF-8">
+  <style>
+    svg {
+      /* the entirety of the SVG should be unselectable. */
+      -webkit-user-select: none; /* Safari */
+      user-select: none;
+    }
+
+    /* Buttons allow panning and zooming */
+    .button {
+      touch-action: none;
+    }
+
+    /* sliders allow panning horizontally but not vertically, and pinch zooming */
+    .slider {
+      touch-action: none;
+    }
+
+    /* keys on the keyboard need to handle it all themselves. Pan and zoom elsewhere. */
+    .keyboard {
+      touch-action: none;
+    }
+  </style>
 </head>
 <body onload="prepare();" bgcolor="black" class="notranslate">
   <div><select id="panel_type"></select></div>
@@ -30,9 +52,12 @@ function prepare() {
   panelTypeSelect = document.getElementById("panel_type");
   panelTypeSelect.onchange = changePanelType;
 
+  console.log("Creating Connector");
   connector = new Connector(wsroot(), '$keyboard$', '$version$');
+  console.log("Have Connector, poulating view options");
   connector.populateViewOptions(panelTypeSelect);
 
+  console.log("Selecting view at index 0");
   connector.selectView(0);
   container.appendChild(connector.root);
   connector.showMessage("Connecting to server...");

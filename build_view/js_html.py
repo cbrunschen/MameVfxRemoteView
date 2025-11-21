@@ -16,7 +16,7 @@ class HTMLJSVisitor(ViewVisitor):
   def __init__(self, real_logos: bool = False):
     self.indent = '    '
     self.views: list[HTMLJSView] = []
-    self.offset: Offset = Offset(0, 0)
+    self.offset: Vector = Vector(0, 0)
   
   @property
   def code(self):
@@ -40,6 +40,7 @@ class HTMLJSVisitor(ViewVisitor):
     self.code.extend([indent(l, self.indent) for l in s])
   
   def visitView(self, view: View):
+    self.offset = Vector(0, 0)
     self.views.append(HTMLJSView(view.name))
     super().visitView(view)
     bounds = view.bounds
@@ -105,12 +106,18 @@ class HTMLJSVisitor(ViewVisitor):
     else:
       self.append(f'{addButton};')
 
+  def visitLight(self, light: 'Light'):
+    bounds = light.bounds + self.offset
+    self.append(f'this.addLight({bounds.coords()}, {light.number});')
+
   def visitLabel(self, label: 'Label'):
+    color = 'this.accentColor' if label.color == 'accent' else f'Colors.{snake_to_upper_snake_case(label.color)}' if label.color else 'null'
     bounds = label.bounds + self.offset
     bold = 'true' if label.bold else 'false'
     italic = 'true' if label.italic else 'false'
-    centered = 'true' if label.centered else 'false'
-    self.append(f'this.addLabel({bounds.coords()}, "{label.text}", {label.fontSize}, {bold}, {italic}, {centered});')
+    centered = 'true' if label.alignment == Alignment.CENTERED else 'false'
+    stretched = 'true' if label.alignment == Alignment.STRETCH else 'false'
+    self.append(f'this.addLabel({bounds.coords()}, "{label.text}", {label.fontSize}, {bold}, {italic}, {centered}, {stretched}, {color});')
 
   def visitSlider(self, slider: 'Slider'):
     bounds = slider.bounds + self.offset
@@ -124,15 +131,41 @@ class HTMLJSVisitor(ViewVisitor):
     bounds = rectangle.bounds + self.offset
     color = 'this.accentColor' if rectangle.color == 'accent' else f'Colors.{snake_to_upper_snake_case(rectangle.color)}'
     self.append(f'this.addRectangle({bounds.coords()}, {color});')
-
-  def visitSymbol(self, symbol: 'Symbol'):
-    bounds = symbol.bounds + self.offset
-    self.append(f'this.addSymbol({bounds.coords()}, "{symbol.name}");')
   
   def visitKey(self, key: 'Key'):
     bounds = key.bounds + self.offset
-    self.append(f'this.addKey({bounds.coords()}, {key.number}, {key.black});')
+    black = 'true' if key.black else 'false'
+    self.append(f'this.addKey({bounds.coords()}, {key.number}, {black}, "{key.shape.path}");')
 
+  def visitKeyboard(self, keyboard: 'Keyboard'):
+    offset = self.offset
+    self.offset += keyboard.bounds.origin
+
+    for key in keyboard.items:
+      key.accept(self)
+
+    # bounds = keyboard.bounds + self.offset
+    # self.append(f'this.addKeyboard({bounds.coords()}, {key.number}, {key.black});')
+
+    self.offset = offset
+
+  def visitShowDrawing(self, show: ShowDrawing):
+    drawing = show.drawing
+    bounds = show.bounds.offset(self.offset)
+    self.append(f'this.addDrawing({bounds.coords()},')
+    self.append(f'  "{drawing.bounds.x} {drawing.bounds.y} {drawing.bounds.w} {drawing.bounds.h}",')
+    self.append(f'  [')
+    element = drawing.toSvgElement(show.colors)
+    for child in element.children:
+      if isinstance(child, Element):
+        self.append('    {')
+        self.append(f'      tag: "{child.tag}",')
+        for attr, value in child.attrs.items():
+          self.append(f'      "{attr}": `{value}`,')
+        self.append('    },')
+
+    self.append('  ]);')
+    
   def __str__(self):
     template = self.load("View.js")
 
