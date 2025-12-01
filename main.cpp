@@ -9,7 +9,9 @@
 #include <list>
 #include <map>
 #include <mutex>
+#include <spanstream>
 #include <sstream>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -35,7 +37,11 @@
 #define HTML "View.html"
 #define JS "View.js"
 
-#define DEBUG 2
+#define LICENSE "LICENSE.html"
+#define ARIMO "fonts/Arimo.ttf"
+#define ARIMO_ITALIC "fonts/Arimo-Italic.ttf"
+
+#define DEBUG 0
 #if DEBUG
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #define LOG_FUNCTION do { LOG("%s(), state = %d\r\n", __func__, m_mame_connection_state); } while(0)
@@ -65,15 +71,60 @@ static const unsigned char ssl_cert[] {
 
 #endif // USE_SSL
 
-static const char html[] {
+struct Loadable {
+  std::string path_;
+  std::string_view predef_;
+  std::string loaded_;
+
+  Loadable(const char *path, const char * const data, size_t len) 
+  : path_(path), predef_(data, len)
+  {}
+
+  std::string_view data(const std::filesystem::path &webroot) {
+    if (!webroot.empty()) {
+      std::cerr << "Loading '" << path_ << "'" << std::endl;
+      std::filesystem::path fullpath(webroot);
+      fullpath.append(path_);
+
+      auto size = std::filesystem::file_size(fullpath);
+      loaded_.clear();
+      loaded_.resize(size);
+
+      std::basic_ifstream<char> in(fullpath);
+      in.read(loaded_.data(), size);
+      return loaded_;
+    } else {
+      return predef_;
+    }
+  }
+};
+
+static const char html_data[] {
 #embed HTML
 };
-static std::string htmls(html);
 
-static const char js[] {
+static Loadable html(HTML, html_data, sizeof(html_data));
+
+static const char js_data[] {
 #embed JS
 };
-static std::string jss(js);
+static Loadable js(JS, js_data, sizeof(js_data));
+
+static const char license_data[] {
+#embed LICENSE
+};
+static Loadable license(LICENSE, license_data, sizeof(license_data));
+
+static const char arimo_data[] {
+#embed ARIMO
+};
+static Loadable arimo(ARIMO, arimo_data, sizeof(arimo_data));
+
+static const char arimo_italic_data[] {
+#embed ARIMO_ITALIC
+};
+static Loadable arimo_italic(ARIMO_ITALIC, arimo_italic_data, sizeof(arimo_italic_data));
+
 
 static const char WS_URL[] = "/socket";
 
@@ -1053,43 +1104,11 @@ struct Server : Connected {
     }
   }
 
-  std::filesystem::path html_path() {
-    auto path = m_webroot;
-    path.append(HTML);
-    return path;
-  }
-
-  std::filesystem::path js_path() {
-    auto path = m_webroot;
-    path.append(JS);
-    return path;
-  }
-
-  std::string load(const std::filesystem::path &path) {
-    auto size = std::filesystem::file_size(path);
-    std::string s(size, '\0');
-    std::ifstream in(path);
-    in.read(&s[0], size);
-    return s;
-  }
-
-  std::string js() {
-    if (m_webroot != "") {
-      LOG("fetching JS from '%s'\n", js_path().c_str());
-      return load(js_path());
-    } else {
-      return jss;
-    }
-  }
-
-  std::string html() {
-    if (m_webroot != "") {
-      LOG("fetching HTML from '%s'\n", html_path().c_str());
-      return load(html_path());
-    } else {
-      return htmls;
-    }
-  }
+  std::string_view js() { return ::js.data(m_webroot); }
+  std::string_view html() { return ::html.data(m_webroot); }
+  std::string_view license() { return ::license.data(m_webroot); }
+  std::string_view arimo() { return ::arimo.data(m_webroot); }
+  std::string_view arimo_italic() { return ::arimo_italic.data(m_webroot); }
 };
 
 /**
@@ -1119,13 +1138,8 @@ void write_template(std::ostream &dst, std::istream &src, substitution substitut
   }
 }
 
-void write_template(std::ostream &dst, const std::string &src, substitution substitute, char init, char term) {
-  std::stringstream src_stream(src);
-  write_template(dst, src_stream, substitute, init, term);
-}
-
-void write_template(std::ostream &dst, const char *src, substitution substitute, char init, char term) {
-  std::stringstream src_stream(src);
+void write_template(std::ostream &dst, const std::string_view &src, substitution substitute, char init, char term) {
+  std::ispanstream src_stream(src);
   write_template(dst, src_stream, substitute, init, term);
 }
 
@@ -1309,7 +1323,7 @@ static int serve_html(struct mg_connection *conn, void *user_data) {
   auto lookup = [server](std::string &s) { return server->substitute(s); };
   std::stringstream templated;
 
-  write_template(templated, server->html(), lookup, '$', '$');
+  write_template(templated, server->html(), lookup, static_cast<char>('$'), static_cast<char>('$'));
   std::string result = templated.str();
 
   mg_send_http_ok(conn, "text/html", result.length());
@@ -1321,9 +1335,39 @@ static int serve_html(struct mg_connection *conn, void *user_data) {
 static int serve_js(struct mg_connection *conn, void *user_data) {
   Server *server = static_cast<Server *>(user_data);
 
-  std::string js = server->js();
+  std::string_view js = server->js();
   mg_send_http_ok(conn, "text/javascript", js.length());
   mg_write(conn, js.data(), js.length());
+
+  return 200; /* HTTP state 200 = OK */
+}
+
+static int serve_license(struct mg_connection *conn, void *user_data) {
+  Server *server = static_cast<Server *>(user_data);
+
+  std::string_view license = server->license();
+  mg_send_http_ok(conn, "text/html", license.length());
+  mg_write(conn, license.data(), license.length());
+
+  return 200; /* HTTP state 200 = OK */
+}
+
+static int serve_arimo(struct mg_connection *conn, void *user_data) {
+  Server *server = static_cast<Server *>(user_data);
+
+  std::string_view arimo = server->arimo();
+  mg_send_http_ok(conn, "font/ttf", arimo.length());
+  mg_write(conn, arimo.data(), arimo.length());
+
+  return 200; /* HTTP state 200 = OK */
+}
+
+static int serve_arimo_italic(struct mg_connection *conn, void *user_data) {
+  Server *server = static_cast<Server *>(user_data);
+
+  std::string_view arimo_italic = server->arimo_italic();
+  mg_send_http_ok(conn, "font/ttf", arimo_italic.length());
+  mg_write(conn, arimo_italic.data(), arimo_italic.length());
 
   return 200; /* HTTP state 200 = OK */
 }
@@ -1474,6 +1518,9 @@ int main(int argc, char *argv[]) {
   mg_set_request_handler(ctx, "/index.html", serve_html, &server);
   mg_set_request_handler(ctx, "/View.html", serve_html, &server);
   mg_set_request_handler(ctx, "/View.js", serve_js, &server);
+  mg_set_request_handler(ctx, "/license.html", serve_license, &server);
+  mg_set_request_handler(ctx, "/" ARIMO, serve_arimo, &server);
+  mg_set_request_handler(ctx, "/" ARIMO_ITALIC, serve_arimo_italic, &server);
 
   /* Let the server run. */
   // L(std::cerr << "Websocket server running" << std::endl);

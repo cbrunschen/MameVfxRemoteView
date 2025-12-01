@@ -67,3 +67,9 @@ class ViewVisitor:
 
   def visitShowDrawing(self, show: 'ShowDrawing'):
     pass
+
+  def visitMultiPageChevrons(self, chevrons: 'MultiPageChevrons'):
+    pass
+
+  def visitWhiteLineAround(self, line: 'WhiteLineAround'):
+    pass

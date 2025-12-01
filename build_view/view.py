@@ -1,28 +1,14 @@
 #!/usr/bin/env python
 
 from dataclasses import dataclass, field
-from enum import Enum, IntEnum
+from math import tan, radians
 from rect import *
 from util import *
 from textwrap import dedent
 from mysvg import SVGPath, SVGRect, SVGDrawing, SVGCircle
 from keys import KeyShape
 from viewvisitor import ViewVisitor
-
-class LabelPosition(int, Enum):
-  __str__ = Enum.__str__
-  ABOVE = 1
-  CENTERED = 2
-  BELOW = CENTERED
-  ABOVE_CENTERED = ABOVE | CENTERED
-
-class Alignment(int, Enum):
-  __str__ = Enum.__str__
-  CENTERED = 0
-  LEFT = 1
-  RIGHT = 2
-  STRETCH = 3
-  STRETCH_LEFT = STRETCH + LEFT
+from render import Font, Metrics
 
 @dataclass(frozen=True)
 class Shade:
@@ -35,9 +21,11 @@ SHADE_MEDIUM = Shade('medium', 'button_medium', 'button_pressed')
 SHADE_DARK = Shade('dark', 'button_dark', 'button_pressed')
 SHADE_SCREEN = Shade('screen', 'button_screen', 'button_pressed')
 
+
 class ViewItem:
   def accept(self, visitor: 'ViewVisitor') -> None:
     pass
+
 
 @dataclass
 class AccentColor(ViewItem):
@@ -46,12 +34,14 @@ class AccentColor(ViewItem):
   def accept(self, visitor: ViewVisitor):
     visitor.visitAccentColor(self)
 
+
 @dataclass
 class Display(ViewItem):
   bounds: Rect
 
   def accept(self, visitor: ViewVisitor):
     visitor.visitDisplay(self)
+
 
 @dataclass
 class PatchSelectButton(ViewItem):
@@ -61,6 +51,7 @@ class PatchSelectButton(ViewItem):
 
   def accept(self, visitor):
     visitor.visitPatchSelectButton(self)
+
 
 @dataclass
 class Button(ViewItem):
@@ -73,6 +64,7 @@ class Button(ViewItem):
   def accept(self, visitor):
     visitor.visitButton(self)
 
+
 @dataclass
 class Light(ViewItem):
   bounds: Rect
@@ -80,6 +72,8 @@ class Light(ViewItem):
 
   def accept(self, visitor):
     visitor.visitLight(self)
+
+
 
 @dataclass
 class Slider(ViewItem):
@@ -89,6 +83,7 @@ class Slider(ViewItem):
 
   def accept(self, visitor):
     visitor.visitSlider(self)
+
 
 @dataclass
 class Wheel(ViewItem):
@@ -100,18 +95,24 @@ class Wheel(ViewItem):
   def accept(self, visitor):
     visitor.visitWheel(self)
 
+
 @dataclass
 class Label(ViewItem):
-  bounds: Rect
+  x: float
+  y: float  # baseline
+  w: float
   text: str
-  fontSize: float
-  bold: bool = False
-  italic: bool = False
-  alignment: Alignment = Alignment.LEFT
-  color: str|None = None
+  font: Font
+  alignment: Alignment = field(default=Alignment.LEFT)
+  color: str|None = field(default=None)
+
+  @property
+  def bounds(self):
+    return Rect(self.x, self.y - self.font.metrics.baseline, self.w, self.font.metrics.height)
 
   def accept(self, visitor):
     visitor.visitLabel(self)
+
 
 @dataclass
 class Rectangle(ViewItem):
@@ -121,6 +122,7 @@ class Rectangle(ViewItem):
   def accept(self, visitor):
     visitor.visitRectangle(self)
 
+
 @dataclass
 class Ellipse(ViewItem):
   bounds: Rect
@@ -128,6 +130,7 @@ class Ellipse(ViewItem):
 
   def accept(self, visitor):
     visitor.visitEllipse(self)
+
 
 # not a dataclass!
 class Context(ViewItem):
@@ -161,6 +164,7 @@ class Context(ViewItem):
 
   def end(self):
     pass
+
 
 @dataclass
 class Conditional(Context):
@@ -199,6 +203,7 @@ class Conditional(Context):
 
   def accept(self, visitor):
     visitor.visitConditional(self)
+
 
 @dataclass
 class Group(Context):
@@ -254,6 +259,7 @@ class Group(Context):
 
   def accept(self, visitor: ViewVisitor):
     visitor.visitGroup(self)
+
 
 # A key on the keyboard!
 @dataclass
@@ -312,6 +318,7 @@ class View(Context):
   def accept(self, visitor: ViewVisitor):
     visitor.visitView(self)
 
+
 @dataclass
 class ShowDrawing(ViewItem):
   bounds: Rect
@@ -321,6 +328,32 @@ class ShowDrawing(ViewItem):
   def accept(self, visitor: ViewVisitor):
     visitor.visitShowDrawing(self)
 
+
+@dataclass
+class MultiPageChevrons(ViewItem):
+  labels: list[Label]
+
+  def accept(self, visitor: ViewVisitor):
+    visitor.visitMultiPageChevrons(self)
+  
+  @staticmethod
+  def svgPath(w: float, h: float):
+    ta = tan(radians(12))
+    hh = h - 1.5
+    return dedent(f'''\
+      M 1 0.125 l {w - 1.125} {0} -{hh * ta} {hh} \
+      M 0 1.125 l {w - 1.125 - ta} 0 -{hh * ta} {hh} \
+    ''')
+
+
+@dataclass
+class WhiteLineAround(ViewItem):
+  label: Label
+  thickness: float
+
+  def accept(self, visitor: ViewVisitor):
+    visitor.visitWhiteLineAround(self)
+  
 
 # Here are some predefined drawings
 class Drawings:

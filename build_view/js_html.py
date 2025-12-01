@@ -2,9 +2,9 @@
 
 from textwrap import indent, dedent, wrap
 from dataclasses import dataclass, field
-from colors import Color, colors
-
+from colors import colors
 from view import *
+from render import TextRenderer
 
 @dataclass
 class HTMLJSView:
@@ -13,10 +13,16 @@ class HTMLJSView:
 
 class HTMLJSVisitor(ViewVisitor):
 
-  def __init__(self, real_logos: bool = False):
+  def __init__(
+      self,
+      text_paths: bool = False
+    ):
+    self.text_paths = text_paths
     self.indent = '    '
     self.views: list[HTMLJSView] = []
     self.offset: Vector = Vector(0, 0)
+    self.text_renderer = TextRenderer()
+
   
   @property
   def code(self):
@@ -31,7 +37,9 @@ class HTMLJSVisitor(ViewVisitor):
     self.indent = self.indent.removeprefix('  ')
   
   def defaultFontSize(self):
-    return 3.5
+    if self.text_paths:
+      return 4.3
+    return 3.6
 
   def append(self, s):
     self.code.append(indent(s, self.indent))
@@ -68,7 +76,7 @@ class HTMLJSVisitor(ViewVisitor):
     self.append('}')
   
   def visitGroup(self, group: Group):
-    self.offset += group.offset
+    self.offset = self.offset + group.offset
     self.append(f"// Starting group '{group.id}' at offset {self.offset.x},{self.offset.y}")
 
     for i in group.items:
@@ -113,11 +121,19 @@ class HTMLJSVisitor(ViewVisitor):
   def visitLabel(self, label: 'Label'):
     color = 'this.accentColor' if label.color == 'accent' else f'Colors.{snake_to_upper_snake_case(label.color)}' if label.color else 'null'
     bounds = label.bounds + self.offset
-    bold = 'true' if label.bold else 'false'
-    italic = 'true' if label.italic else 'false'
-    centered = 'true' if label.alignment == Alignment.CENTERED else 'false'
-    stretched = 'true' if label.alignment == Alignment.STRETCH else 'false'
-    self.append(f'this.addLabel({bounds.coords()}, "{label.text}", {label.fontSize}, {bold}, {italic}, {centered}, {stretched}, {color});')
+    if self.text_paths:
+      if color == 'null':
+        color = 'white'
+      x, y, w = bounds.x, bounds.y, bounds.w
+      tp = self.text_renderer.textPath(label.text, w, label.font, label.alignment)
+      self.append(f'this.addPath({x}, {y}, "{tp}", "{color}")')
+    else:
+      x, y, w = label.x + self.offset.x, label.y + self.offset.y, label.w
+      bold = 'true' if label.font.bold else 'false'
+      italic = 'true' if label.font.italic else 'false'
+      centered = 'true' if label.alignment == Alignment.CENTERED else 'false'
+      stretched = 'true' if label.alignment >= Alignment.STRETCH else 'false'
+      self.append(f'this.addLabel({x}, {y}, {w}, "{label.text}", {label.font.size}, {bold}, {italic}, {centered}, {stretched}, {color});')
 
   def visitSlider(self, slider: 'Slider'):
     bounds = slider.bounds + self.offset
@@ -132,6 +148,12 @@ class HTMLJSVisitor(ViewVisitor):
     color = 'this.accentColor' if rectangle.color == 'accent' else f'Colors.{snake_to_upper_snake_case(rectangle.color)}'
     self.append(f'this.addRectangle({bounds.coords()}, {color});')
   
+  def visitEllipse(self, ellipse: 'Ellipse'):
+    dprint(f'visitEllipse({ellipse})')
+    bounds = ellipse.bounds + self.offset
+    color = 'this.accentColor' if ellipse.color == 'accent' else f'Colors.{snake_to_upper_snake_case(ellipse.color)}'
+    self.append(f'this.addEllipse({bounds.coords()}, {color});')
+
   def visitKey(self, key: 'Key'):
     bounds = key.bounds + self.offset
     black = 'true' if key.black else 'false'
@@ -139,13 +161,14 @@ class HTMLJSVisitor(ViewVisitor):
 
   def visitKeyboard(self, keyboard: 'Keyboard'):
     offset = self.offset
-    self.offset += keyboard.bounds.origin
+    self.offset = self.offset + keyboard.bounds.origin
+    x, y = self.offset.x, self.offset.y
+    w, h = keyboard.bounds.w, keyboard.bounds.h
+
+    self.append(f'this.addKeyboard({x}, {y}, {w}, {h}, Colors.KEYBOARD_BACKGROUND)')
 
     for key in keyboard.items:
       key.accept(self)
-
-    # bounds = keyboard.bounds + self.offset
-    # self.append(f'this.addKeyboard({bounds.coords()}, {key.number}, {key.black});')
 
     self.offset = offset
 
@@ -165,7 +188,50 @@ class HTMLJSVisitor(ViewVisitor):
         self.append('    },')
 
     self.append('  ]);')
+  
+  def visitMultiPageChevrons(self, chevrons: MultiPageChevrons):
+    # For now at least, generate font metrics ourselves ...
+    labels = chevrons.labels
+    nLines = len(labels)
+    label = labels[-1]
+    bottom_x = self.text_renderer.textWidth(label.text, label.font) + 0.5
+    if nLines > 1:
+      above = labels[-2]
+      top_x = self.text_renderer.textWidth(above.text, label.font) + 0.5
+    else:
+      top_x = max(0, bottom_x - 7)
     
+    bounds = label.bounds.copy()
+
+    x = bounds.x + top_x
+    y = bounds.y - 1.5
+    w = (bottom_x - top_x) + 1.25 + (bounds.h + 1.5) * tan(radians(12))
+    h = label.font.baseline + 1.5
+
+    drawing = SVGDrawing(Rect(0, 0, w, h), "no_name") \
+      .addItem('path', SVGPath(MultiPageChevrons.svgPath(w, h).strip(), stroke_width="0.25", stroke=True, fill=False))
+    showDrawing = ShowDrawing(Rect(x, y, w, h), drawing, {'path':'white'})
+    self.visitShowDrawing(showDrawing)
+    
+  def visitWhiteLineAround(self, line: 'WhiteLineAround'):
+    bounds = line.label.bounds.copy()
+    eprint(f'visiting white line around \'{line.label.text}\' in {bounds}')
+    # For now at least, generate font metrics ourselves ...
+    tw = self.text_renderer.textWidth(line.label.text, line.label.font) + 2
+    eprint(f'text width is {tw}')
+    x0 = bounds.x
+    w = (bounds.w - tw) / 2
+    eprint(f'({bounds.w} - {tw}) / 2 = {w}')
+    x1 = bounds.x + (bounds.w + tw) / 2
+    h = line.thickness
+    y = bounds.y + 0.5 * (bounds.h - h)
+
+    r0 = Rect(x0, y, w, h)
+    r1 = Rect(x1, y, w, h)
+    eprint(f'drawing white rectangles {r0} and {r1}')
+    self.visitRectangle(Rectangle(r0, 'white'))
+    self.visitRectangle(Rectangle(r1, 'white'))
+
   def __str__(self):
     template = self.load("View.js")
 

@@ -3,8 +3,13 @@
 from re import sub
 from textwrap import wrap
 from sys import stderr
+from enum import Enum
 
 DEBUG = False
+
+def set_debug(debug: bool = False):
+  global DEBUG
+  DEBUG = debug
 
 def to_id(s):
   """Merge multiple lines (trimming hyphenation),
@@ -19,6 +24,7 @@ def eprint(*args, **kwargs):
   print(*args, file=stderr, **kwargs)
 
 def dprint(*args, **kwargs):
+  global DEBUG
   if DEBUG:
     print(*args, file=stderr, **kwargs)
 
@@ -37,3 +43,16 @@ def snake_to_title_case(s: str) -> str:
 
 def snake_to_upper_snake_case(s: str) -> str:
   return '_'.join(i.upper() for i in snake_parts(s))
+
+class LabelPosition(int, Enum):
+  __str__ = Enum.__str__
+  ABOVE = 1
+  CENTERED = 2
+  ABOVE_CENTERED = ABOVE | CENTERED
+
+class Alignment(int, Enum):
+  __str__ = Enum.__str__
+  CENTERED = 0
+  LEFT = 1
+  RIGHT = 2
+  STRETCH = 3

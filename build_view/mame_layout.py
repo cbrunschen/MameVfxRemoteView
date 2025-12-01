@@ -3,12 +3,14 @@
 from textwrap import dedent
 
 from dataclasses import dataclass, field
+from math import tan, radians
 from rect import *
 from view import *
 from view_builders import ViewBuilder
 from myxml import *
 from mysvg import *
 from colors import Color, get_color, color_name
+from render import TextRenderer
 
 @dataclass
 class MameLayoutDestination:
@@ -39,15 +41,14 @@ class MameLayoutDestination:
 
 class MameLayoutVisitor(ViewVisitor):
   def __init__(self, keyboard: str, io: str = '', 
-               real_logos: bool = False, 
                fonts: bool = False, 
                hexcolors: bool = False,
-               stretch_text: bool = False):
+               text_paths: bool = False):
     self.io = io
-    self.real_logos = real_logos
     self.fonts = fonts
     self.hexcolors = hexcolors
-    self.stretch_text = stretch_text
+    self.text_paths = text_paths
+    self.text_renderer = TextRenderer()
 
     self.keyboard = keyboard
     self.conditions = {
@@ -486,23 +487,20 @@ class MameLayoutVisitor(ViewVisitor):
 
     align = int(label.alignment)
     if align >= Alignment.STRETCH.value:
-      if self.stretch_text:
-        align = Alignment.STRETCH.value
-      else:
-        align -= Alignment.STRETCH.value
+      align = Alignment.STRETCH.value
     alignment = [ '', 'L_', 'R_', 'S_' ][align]
     if align == 0:
       align = None
 
-    if self.fonts:
-      if label.bold:
-        if label.italic:
+    if self.fonts or self.text_paths:
+      if label.font.bold:
+        if label.font.italic:
           font = '~f_bold_italic~'
           style = 'BI_'
         else:
           font = '~f_bold~'
           style = 'B_'
-      elif label.italic:
+      elif label.font.italic:
         font = '~f_italic~'
         style = 'I_'
       else:
@@ -518,16 +516,27 @@ class MameLayoutVisitor(ViewVisitor):
     useattrs = {}
 
     if id not in self.text_definitions:
-      lt = self.layout_element(
-        name=f'text_{id}',
-        contents=self.layout_text(
-          label.text,
-          name=None,
-          color=None,
-          align=align,
-          font=font,
-          attrs=defattrs,
+      if self.text_paths:
+        w, h = label.bounds.w, label.bounds.h
+        tp = self.text_renderer.textPath(label.text, w, label.font, label.alignment)
+        svg = f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}">{str(SVGPath(tp, fill="white").toSvgElement()).rstrip()}</svg>'
+        lt = self.layout_element(
+          name=f'text_{id}',
+          contents=self.layout_svg_image(
+            bounds=Rect(0, 0, label.bounds.w, label.bounds.h),
+            svg=svg
         ))
+      else:
+        lt = self.layout_element(
+          name=f'text_{id}',
+          contents=self.layout_text(
+            label.text,
+            name=None,
+            color=None,
+            align=align,
+            font=font,
+            attrs=defattrs,
+          ))
       self.text_definitions[id] = lt
 
     self.texts.append(
@@ -695,6 +704,52 @@ class MameLayoutVisitor(ViewVisitor):
       ])
     
     self.decorations.append(self.layout_element(ref=name, bounds=show.bounds))
+  
+  def visitMultiPageChevrons(self, chevrons: MultiPageChevrons):
+    labels = chevrons.labels
+    nLines = len(labels)
+    label = labels[-1]
+    bottom_x = self.text_renderer.textWidth(label.text, label.font) + 0.5
+    if nLines > 1:
+      above = labels[-2]
+      top_x = self.text_renderer.textWidth(above.text, above.font) + 0.5
+    else:
+      top_x = max(0, bottom_x - 7)
+  
+    x = label.bounds.x + top_x
+    y = label.bounds.y - 1.5
+    w = (bottom_x - top_x) + 1.25 + (label.bounds.h + 1.5) * tan(radians(12))
+    h = label.font.baseline + 1.5
+    
+    name = to_id(f'multipage_{bottom_x - top_x}_x_{label.bounds.h}')
+    if not name in self.decoration_definitions:
+      drawing = SVGDrawing(Rect(0, 0, w, h), name) \
+        .addItem('path', SVGPath(MultiPageChevrons.svgPath(w, h).strip(), stroke_width="0.25", stroke=True, fill=False))
+
+      self.decoration_definitions[name] = self.layout_element(name=name, contents=[
+        self.layout_svg_image(svg=str(drawing.toSvgElement({'path':'white'})), bounds=drawing.bounds)
+      ])
+
+    self.decorations.append(self.layout_element(ref=name, bounds=Rect(x, y, w, h)))
+
+  def visitWhiteLineAround(self, line: 'WhiteLineAround'):
+    bounds = line.label.bounds.copy()
+    eprint(f'visiting white line around \'{line.label.text}\' in {bounds}')
+    # For now at least, generate font metrics ourselves ...
+    tw = self.text_renderer.textWidth(line.label.text, line.label.font) + 2
+    eprint(f'text width is {tw}')
+    x0 = bounds.x
+    w = (bounds.w - tw) / 2
+    eprint(f'({bounds.w} - {tw}) / 2 = {w}')
+    x1 = bounds.x + (bounds.w + tw) / 2
+    h = line.thickness
+    y = bounds.y + 0.5 * (bounds.h - h)
+
+    r0 = Rect(x0, y, w, h)
+    r1 = Rect(x1, y, w, h)
+    eprint(f'drawing white rectangles {r0} and {r1}')
+    self.visitRectangle(Rectangle(r0, 'white'))
+    self.visitRectangle(Rectangle(r1, 'white'))
 
   def ioport(self, port):
     return f'{self.io}{port}'
@@ -703,10 +758,10 @@ class MameLayoutVisitor(ViewVisitor):
     layout = Element('mamelayout', {'version':'2'})
 
     if self.fonts:
-      layout.append(self.layout_param('f_bold', 'Nonexistent Sans|Bold,sans-serif|Bold,default'))
-      layout.append(self.layout_param('f_italic', 'Nonexistent Sans|Italic,sans-serif|Italic,default'))
-      layout.append(self.layout_param('f_bold_italic', 'Nonexistent Sans|BoldItalic,sans-serif|BoldItalic,default'))
-      layout.append(self.layout_param('f_regular', 'Nonexistent Sans|Regular,sans-serif|Regular,default'))
+      layout.append(self.layout_param('f_regular', 'sans-serif|Regular,default'))
+      layout.append(self.layout_param('f_bold', 'sans-serif|Bold,default'))
+      layout.append(self.layout_param('f_italic', 'sans-serif|Italic,default'))
+      layout.append(self.layout_param('f_bold_italic', 'sans-serif|BoldItalic,default'))
 
     layout.append(Space())
     layout.append(Comment('Decoration definitions'))

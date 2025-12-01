@@ -5,9 +5,10 @@ from rect import *
 from util import *
 from view import *
 from keys import *
-from typing import cast 
+from typing import cast
+from render import TextRenderer, Metrics
 
-# The pitch-bend and modulation wheels are approximately:
+# The pitch-bend and modulation wheels are approxi  mately:
 # r = 40mm
 # centered 26mm below the surface,
 # giving an above-surface arc of approximately 99 degrees,
@@ -95,19 +96,27 @@ from typing import cast
 @dataclass
 class ViewBuilder:
   name: str
-  fontSize: float
   # these are all internal variables really
   panel_background: Rectangle|None = None
   contexts: list[Context] = field(default_factory=list)
 
   def __post_init__(self):
+    self.text_renderer = TextRenderer()
+    self.button_font = self.text_renderer.getFont('Panel', italic=True).scaledToTextHeight(3.6)
+    self.back_panel_font = self.button_font
+    self.small_font = self.text_renderer.getFont('Panel', bold=True).scaledToAscent(2.5)
+    self.accent_line_font = self.text_renderer.getFont('Panel', bold=True).scaledToTextHeight(3.6)
+
     self.view = View(self.name)
     self.contexts.append(self.view)
     self.accent_line_y = 102
-    self.label_y = self.accent_line_y - self.fontSize
+    self.text_top_below = 0.5 - self.button_font.top
+    self.baseline_above = 1.5
+    self.baseline_above_back_panel = 1.0
+    self.accent_line_label_y = self.accent_line_y - self.baseline_above
     self.accent_line_thickness = 1.2
     self.real_logos = False
-  
+    
   def withRealLogos(self, real_logos):
     self.real_logos = real_logos
     return self
@@ -125,31 +134,38 @@ class ViewBuilder:
   def setAccentColor(self, rgb):
     return self.add(AccentColor(rgb))
   
-  def addLabel(self, x, y, w, fontSize, label, bold = False, italic = False, alignment = Alignment.LEFT, color = None):      
-    return self.add(Label(Rect(x, y, w, fontSize), label, fontSize, bold, italic, alignment, color))
+  def addLabel(self, x:float, y:float, w:float, label:str, font:Font, alignment:Alignment = Alignment.LEFT, color = None):      
+    return self.add(Label(x, y, w, label, font, alignment, color))
   
-  def addLabelAbove(self, x, item, w, fontSize, label, bold = False, italic = False, alignment = Alignment.LEFT, color = None): 
-    return self.add(Label(Rect(x, item.bounds.y - fontSize, w, fontSize), label, fontSize, bold, italic, alignment, color))
+  def addLabelAbove(self, x:float, item, w:float, label:str, font:Font, alignment = Alignment.LEFT, color = None): 
+    return self.add(Label(x, item.bounds.y - self.baseline_above, w, label, font, alignment, color))
 
-  def addLabelBelow(self, x, item, w, fontSize, label, bold = False, italic = False, alignment = Alignment.LEFT, color = None): 
-    return self.add(Label(Rect(x, item.bounds.y + item.bounds.h, w, fontSize), label, fontSize, bold, italic, alignment, color))
+  def addLabelJustAbove(self, x:float, item, w:float, label:str, font:Font, alignment = Alignment.LEFT, color = None): 
+    return self.add(Label(x, item.bounds.y - self.baseline_above_back_panel, w, label, font, alignment, color))
 
-  def addPatchSelectButton(self, x, y, w, h, number):
+  def addLabelBelow(self, x:float, item, w:float, label:str, font:Font, alignment = Alignment.LEFT, color = None): 
+    return self.add(Label(x, item.bounds.y + item.bounds.h + self.text_top_below + font.text_height, w, label, font, alignment, color))
+
+  def addPatchSelectButton(self, x:float, y:float, w:float, h:float, number):
     return self.add(PatchSelectButton(Rect(x, y, w, h), number))
   
-  def addButton(self, x, y, w, h, label, labelPosition: LabelPosition, value, shade, multiPage = False, lightId = -1):
+  def addButton(self, x:float, y:float, w:float, h:float, label:str, labelPosition: LabelPosition, value:int, shade, multiPage = False, lightId = -1):
     button = Button(Rect(x, y, w, h), label, value, shade)
     self.add(button)
 
     if not label.startswith("#"):
       labelLines = label.split("\n")
       nLines = len(labelLines)
-      y0 = h if labelPosition == LabelPosition.BELOW else -nLines * self.fontSize
+      y0 = -nLines * self.button_font.text_height + self.button_font.baseline - 1.6
       alignment = Alignment.CENTERED if ((labelPosition & LabelPosition.CENTERED) != 0) else Alignment.LEFT
       
+      labels = []
       for i in range(nLines):
         line = labelLines[i]
-        self.addLabel(x, y + y0 + i * self.fontSize, w, self.fontSize, line, bold=False, italic=True, alignment=alignment)
+        labels.append(self.addLabel(x, y + y0 + i * self.button_font.text_height, w, line, self.button_font, alignment=alignment))
+      
+      if multiPage:
+        self.addMultiPageChevrons(labels)
     
     if lightId >= 0:
       # Light bounds are relative to button bounds
@@ -158,10 +174,10 @@ class ViewBuilder:
     return button
 
   def addButtonBelowDisplay(self, x, y, label, value, shade):
-    return self.addButton(x, y, 15.8, 10, label, LabelPosition.BELOW, value, shade, False, -1)
+    return self.addButton(x, y, 15.8, 10, label, LabelPosition.CENTERED, value, shade, False, -1)
   
   def addButtonWithLightBelowDisplay(self, x, y, label, value, shade, lightId):
-    return self.addButton(x, y, 15.8, 10, label, LabelPosition.BELOW, value, shade, False, lightId)
+    return self.addButton(x, y, 15.8, 10, label, LabelPosition.CENTERED, value, shade, False, lightId)
   
   def addLargeButton(self, x, y, label, value, shade, multiPage=False):
     return self.addButton(x, y, 15.8, 10, label, LabelPosition.ABOVE, value, shade, False, -1)
@@ -274,8 +290,8 @@ class ViewBuilder:
     # The colored line along the base:
     self.addAccentColoredLine(0, self.accent_line_y, 90, 1.2)
     # And the labels above it:
-    self.addLabel(0, self.label_y, 35, self.fontSize, "Volume", bold=True)
-    self.addLabel(47.5, self.label_y, 35, self.fontSize, "Data Entry", bold=True)
+    self.addLabel(0, self.accent_line_label_y, 35, "Volume", self.accent_line_font)
+    self.addLabel(47.5, self.accent_line_label_y, 35, "Data Entry", self.accent_line_font)
 
     return self.endGroup()
 
@@ -303,22 +319,22 @@ class ViewBuilder:
     
     self.onCondition('isSd1')
     if self.isTrue():
-      self.addLabel(0, self.label_y, 15.8, self.fontSize, "BankSet", bold=True, alignment=Alignment.CENTERED)
+      self.addLabel(0, self.accent_line_label_y, 15.8, "BankSet", self.accent_line_font, alignment=Alignment.CENTERED)
     if self.isFalse():
-      self.addLabel(0, self.label_y, 15.8, self.fontSize, "Cart", bold=True, alignment=Alignment.CENTERED)
+      self.addLabel(0, self.accent_line_label_y, 15.8, "Cart", self.accent_line_font, alignment=Alignment.CENTERED)
     self.endCondition()
 
     self.addButtonWithLightBelowDisplay(15.8, 82, "#Sounds",   53, SHADE_LIGHT, 0xd)
-    self.addLabel(15.8, self.label_y, 15.8, self.fontSize, "Sounds", bold=True, alignment=Alignment.CENTERED)
+    self.addLabel(15.8, self.accent_line_label_y, 15.8, "Sounds", self.accent_line_font, alignment=Alignment.CENTERED)
 
     self.addButtonWithLightBelowDisplay(31.6, 82, "#Presets",  54, SHADE_LIGHT, 0x7)
-    self.addLabel(31.6, self.label_y, 15.8, self.fontSize, "Presets", bold=True, alignment=Alignment.CENTERED)
+    self.addLabel(31.6, self.accent_line_label_y, 15.8, "Presets", self.accent_line_font, alignment=Alignment.CENTERED)
 
     # When the keyboard has a sequencer:
     self.onCondition("hasSeq")
     if self.isTrue():
       self.addButtonBelowDisplay     (47.4, 82, "#Seq",      51, SHADE_LIGHT)
-      self.addLabel(47.4, self.label_y, 15.8, self.fontSize, "Seq", alignment=Alignment.CENTERED, bold=True)
+      self.addLabel(47.4, self.accent_line_label_y, 15.8,  "Seq", self.accent_line_font, alignment=Alignment.CENTERED)
     self.endCondition()
 
     self.addButtonWithLightBelowDisplay(87.0, 82, "#0", 55, SHADE_MEDIUM, 0xe)
@@ -332,16 +348,16 @@ class ViewBuilder:
     self.addButtonWithLightBelowDisplay(213.4, 82, "#8", 34, SHADE_MEDIUM, 0x1)
     self.addButtonWithLightBelowDisplay(229.2, 82, "#9", 25, SHADE_MEDIUM, 0x9)
 
-    self.addLabel(87.0, self.label_y, 15.8, self.fontSize, "0", bold=True, alignment=Alignment.CENTERED)
-    self.addLabel(102.8, self.label_y, 15.8, self.fontSize, "1", bold=True, alignment=Alignment.CENTERED)
-    self.addLabel(118.6, self.label_y, 15.8, self.fontSize, "2", bold=True, alignment=Alignment.CENTERED)
-    self.addLabel(134.4, self.label_y, 15.8, self.fontSize, "3", bold=True, alignment=Alignment.CENTERED)
-    self.addLabel(150.2, self.label_y, 15.8, self.fontSize, "4", bold=True, alignment=Alignment.CENTERED)
-    self.addLabel(166.0, self.label_y, 15.8, self.fontSize, "5", bold=True, alignment=Alignment.CENTERED)
-    self.addLabel(181.8, self.label_y, 15.8, self.fontSize, "6", bold=True, alignment=Alignment.CENTERED)
-    self.addLabel(197.6, self.label_y, 15.8, self.fontSize, "7", bold=True, alignment=Alignment.CENTERED)
-    self.addLabel(213.4, self.label_y, 15.8, self.fontSize, "8", bold=True, alignment=Alignment.CENTERED)
-    self.addLabel(229.2, self.label_y, 15.8, self.fontSize, "9", bold=True, alignment=Alignment.CENTERED)
+    self.addLabel(87.0,  self.accent_line_label_y, 15.8, "0", self.accent_line_font, alignment=Alignment.CENTERED)
+    self.addLabel(102.8, self.accent_line_label_y, 15.8, "1", self.accent_line_font, alignment=Alignment.CENTERED)
+    self.addLabel(118.6, self.accent_line_label_y, 15.8, "2", self.accent_line_font, alignment=Alignment.CENTERED)
+    self.addLabel(134.4, self.accent_line_label_y, 15.8, "3", self.accent_line_font, alignment=Alignment.CENTERED)
+    self.addLabel(150.2, self.accent_line_label_y, 15.8, "4", self.accent_line_font, alignment=Alignment.CENTERED)
+    self.addLabel(166.0, self.accent_line_label_y, 15.8, "5", self.accent_line_font, alignment=Alignment.CENTERED)
+    self.addLabel(181.8, self.accent_line_label_y, 15.8, "6", self.accent_line_font, alignment=Alignment.CENTERED)
+    self.addLabel(197.6, self.accent_line_label_y, 15.8, "7", self.accent_line_font, alignment=Alignment.CENTERED)
+    self.addLabel(213.4, self.accent_line_label_y, 15.8, "8", self.accent_line_font, alignment=Alignment.CENTERED)
+    self.addLabel(229.2, self.accent_line_label_y, 15.8, "9", self.accent_line_font, alignment=Alignment.CENTERED)
 
     # The colored line along the base:
     self.addAccentColoredLine(0, self.accent_line_y, 245, 1.2)
@@ -382,7 +398,7 @@ class ViewBuilder:
     self.addSmallButton(120, 42, "Pitch",           11, SHADE_DARK, False)
     self.addSmallButton(135.8, 42, "Pitch\nMod",      13, SHADE_DARK, False)
     self.addSmallButton(151.6, 42, "Filters",         15, SHADE_DARK, True)
-    self.addSmallButton(165, 42, "Output",          17, SHADE_DARK, True)
+    self.addSmallButton(167.4, 42, "Output",          17, SHADE_DARK, True)
 
     self.addSmallButton(120,  22, "LFO",             10, SHADE_DARK, True)
     self.addSmallButton(135.8,  22, "Env1",            12, SHADE_DARK, True)
@@ -391,10 +407,12 @@ class ViewBuilder:
 
     # When the keyboard has a sequencer:
     self.onCondition("hasSeq")
+
+    smallFontSize = self.small_font.text_height
+
     if self.isTrue():
-      self.addWhiteLine(15.8, 82 - 1.5 * self.fontSize - 0.05, 7.9, 0.25)
-      self.addLabel(22.9, 82 - 2 * self.fontSize, 15.8, self.fontSize, "Tracks", alignment=Alignment.CENTERED)
-      self.addWhiteLine(37.9, 82 - 1.5 * self.fontSize - 0.05, 7.9, 0.25)
+      label = self.addLabel(15.8, 82 - 1.5 * self.button_font.text_height, 2 * 15.8, "Tracks", self.small_font, alignment=Alignment.CENTERED)
+      self.addWhiteLineAround(cast(Label, label), 0.25)
       self.addLargeButtonWithLight(15.8, 82, "1-6",              30, SHADE_MEDIUM, 0x0, alignment=Alignment.CENTERED)
       self.addLargeButtonWithLight(31.6, 82, "7-12",             31, SHADE_MEDIUM, 0x8, alignment=Alignment.CENTERED)
       
@@ -416,19 +434,17 @@ class ViewBuilder:
       self.addSmallButton(75.8,  22, "Storage",       21, SHADE_LIGHT, False)
       self.addSmallButton(91.690,  22, "MIDI\nControl", 24, SHADE_LIGHT, True)
 
-      self.addWhiteLine(60.0, 42 - 1.5 * self.fontSize - 0.05, 17.9, 0.25)
-      self.addLabel(77.9, 42 - 2 * self.fontSize, 10, self.fontSize, "Edit", alignment=Alignment.CENTERED)
-      self.addWhiteLine(87.9, 42 - 1.5 * self.fontSize - 0.05, 17.9, 0.25)
+      label = self.addLabel(60.0, 42 - 1.5 * self.button_font.text_height, 3 * 15.8, "Edit", self.small_font, alignment=Alignment.CENTERED)
+      self.addWhiteLineAround(cast(Label, label), 0.25)
 
-      self.addLabel(60, 13-(0.5 + self.fontSize), 35, self.fontSize, "System", bold=True)
-      self.addAccentColoredLine(60, 13-0.5, 60 - 1.5, 0.5)
-      self.addLabel(60, self.label_y, 35, self.fontSize, "Sequencer", bold=True)
+      self.addLabel(60, 11-(0.5 + self.accent_line_font.descent), 35, "System", self.accent_line_font)
+      self.addAccentColoredLine(60, 11, 60 - 1.5, 0.5)
+      self.addLabel(60, self.accent_line_label_y, 35, "Sequencer", self.accent_line_font)
 
     # When there is no sequencer:
     if self.isFalse():
-      self.addWhiteLine(15, 82 - 1.5 * self.fontSize - 0.05, 10.4, 0.1)
-      self.addLabel(25.4, 82 - 2 * self.fontSize, 10, self.fontSize, "Multi", alignment=Alignment.CENTERED)
-      self.addWhiteLine(35.4, 82 - 1.5 * self.fontSize - 0.05, 10.4, 0.1)
+      label = self.addLabel(15.8, 82 - 1.5 * self.button_font.text_height, 2 * 15.8, "Multi", self.small_font, alignment=Alignment.CENTERED)
+      self.addWhiteLineAround(cast(Label, label), 0.25)
       self.addLargeButtonWithLight(15.8, 82, "A",              30, SHADE_MEDIUM, 0x0, alignment=Alignment.CENTERED)
       self.addLargeButtonWithLight(31.6, 82, "B",              31, SHADE_MEDIUM, 0x8, alignment=Alignment.CENTERED)
 
@@ -438,10 +454,10 @@ class ViewBuilder:
       self.addLargeButton(75.8, 82, "Storage",       21, SHADE_LIGHT, False)
       self.addLargeButton(91.6, 82, "MIDI\nControl", 24, SHADE_LIGHT, True)
 
-      self.addLabel(60, self.label_y, 35, self.fontSize, "System", bold=True)
+      self.addLabel(60, self.accent_line_label_y, 35, "System", font=self.accent_line_font)
       
       # There's no 'System' label at the top, but make sure we use the same amount of space.
-      group.addExtra(Rect(60, 13-(0.5 + self.fontSize), 35, self.fontSize))
+      group.addExtra(Rect(60, 11-(self.button_font.text_height), 35, self.button_font.text_height))
     self.endCondition()
 
     # The colored lines along the base:
@@ -450,52 +466,52 @@ class ViewBuilder:
     self.addAccentColoredLine(120, self.accent_line_y, 4 * 15.8, 1.2)
 
     # And the labels just above it:
-    self.addLabel(0, self.label_y, 35, self.fontSize, "Performance", bold=True)
-    self.addLabel(120, self.label_y, 35, self.fontSize, "Programming", bold=True)
+    self.addLabel(0, self.accent_line_label_y, 35, "Performance", font=self.accent_line_font)
+    self.addLabel(120, self.accent_line_label_y, 35, "Programming", font=self.accent_line_font)
 
     return self.endGroup()
 
   def addBackPanel(self, offset: Vector|None):
     self.beginGroup("BackPanel", offset)
     self.addRectangle(0, 0, 845, 32, 'body')
-    y = 10
-    self.addLabel(97, y, 10, self.fontSize, "Power", italic=True)
-    self.addLabel(131, y, 8, self.fontSize, "Line", italic=True)
-    self.addLabel(165, y, 10, self.fontSize, "Fuse", italic=True)
+    y = 10 + self.back_panel_font.baseline
+    self.addLabel(97, y, 10, "Power", font=self.back_panel_font)
+    self.addLabel(131, y, 8, "Line", font=self.back_panel_font)
+    self.addLabel(165, y, 10, "Fuse", font=self.back_panel_font)
     
-    line = self.addWhiteLine(477, y + self.fontSize, 87, 0.25)
-    self.addLabel(477, y, 87, self.fontSize, "MIDI", italic=True, alignment=Alignment.CENTERED)
-    self.addLabelBelow(480, line, 8, self.fontSize, "Thru", italic=True)
-    self.addLabelBelow(518, line, 8, self.fontSize, "Out", italic=True)
-    self.addLabelBelow(558, line, 4, self.fontSize, "In", italic=True)
+    line = self.addWhiteLine(477, y + self.back_panel_font.descent, 87, 0.25)
+    self.addLabel(477, y, 87, "MIDI", font=self.back_panel_font, alignment=Alignment.CENTERED)
+    self.addLabelBelow(480, line, 8, "Thru", font=self.back_panel_font)
+    self.addLabelBelow(518, line, 8, "Out", font=self.back_panel_font)
+    self.addLabelBelow(558, line, 4, "In", font=self.back_panel_font)
 
-    self.addLabel(640, y, 12, self.fontSize, "Ft. Sw.", italic=True)
-    self.addLabel(663, y, 17, self.fontSize, "Pedal•CV", italic=True)
+    self.addLabel(640, y, 12, "Ft. Sw.", font=self.back_panel_font)
+    self.addLabel(663, y, 17, "Pedal•CV", font=self.back_panel_font)
 
     self.onCondition("hasSeq")
     if self.isTrue():
-      line = self.addWhiteLine(690, y + self.fontSize, 38, 0.25)
-      left = self.addLabel(692, y, 8, self.fontSize, "Left", italic=True)
-      self.addLabel(717, y, 10, self.fontSize, "Right", italic=True)
-      self.addLabelBelow(690, line, 38, self.fontSize, "Mono", italic=True, alignment=Alignment.CENTERED)
-      self.addLabelAbove(690, left, 38, self.fontSize, "Aux. Out", italic=True, alignment=Alignment.CENTERED)
+      line = self.addWhiteLine(690, y + self.back_panel_font.descent, 38, 0.25)
+      left = self.addLabel(692, y, 8, "Left", font=self.back_panel_font)
+      self.addLabel(717, y, 10, "Right", font=self.back_panel_font)
+      self.addLabelBelow(690, line, 38, "Mono", font=self.back_panel_font, alignment=Alignment.CENTERED)
+      self.addLabelAbove(690, left, 38, "Aux. Out", font=self.back_panel_font, alignment=Alignment.CENTERED)
 
-      line = self.addWhiteLine(740, y + self.fontSize, 38, 0.25)
-      left = self.addLabel(742, y, 8, self.fontSize, "Left", italic=True)
-      self.addLabel(767, y, 10, self.fontSize, "Right", italic=True)
-      self.addLabelBelow(740, line, 38, self.fontSize, "Mono", italic=True, alignment=Alignment.CENTERED)
-      self.addLabelAbove(740, left, 38, self.fontSize, "Main Out", italic=True, alignment=Alignment.CENTERED)
+      line = self.addWhiteLine(740, y + self.back_panel_font.descent, 38, 0.25)
+      left = self.addLabel(742, y, 8, "Left", font=self.back_panel_font)
+      self.addLabel(767, y, 10, "Right", font=self.back_panel_font)
+      self.addLabelBelow(740, line, 38, "Mono", font=self.back_panel_font, alignment=Alignment.CENTERED)
+      self.addLabelAbove(740, left, 38, "Main Out", font=self.back_panel_font, alignment=Alignment.CENTERED)
 
     if self.isFalse():
-      line = self.addWhiteLine(740, y + self.fontSize, 38, 0.25)
-      left = self.addLabel(742, y, 8, self.fontSize, "Left", italic=True)
-      self.addLabel(767, y, 10, self.fontSize, "Right", italic=True)
-      self.addLabelBelow(740, line, 38, self.fontSize, "Mono", italic=True, alignment=Alignment.CENTERED)
-      self.addLabelAbove(740, left, 38, self.fontSize, "Main Out", italic=True, alignment=Alignment.CENTERED)
+      line = self.addWhiteLine(740, y + self.back_panel_font.descent, 38, 0.25)
+      left = self.addLabel(742, y, 8, "Left", font=self.back_panel_font)
+      self.addLabel(767, y, 10, "Right", font=self.back_panel_font)
+      self.addLabelBelow(740, line, 38, "Mono", font=self.back_panel_font, alignment=Alignment.CENTERED)
+      self.addLabelAbove(740, left, 38, "Main Out", font=self.back_panel_font, alignment=Alignment.CENTERED)
 
     self.endCondition()
 
-    self.addLabel(790, y, 15, self.fontSize, "Phones", italic=True)
+    self.addLabel(790, y, 15, "Phones", font=self.back_panel_font)
 
     self.addEllipse(2, 18, 6, 6, 'screwhead')    
     self.addEllipse(837, 18, 6, 6, 'screwhead')    
@@ -508,12 +524,12 @@ class ViewBuilder:
 
     self.addPatchSelectButton(6, 2, 9, 12, 1)
     self.addPatchSelectButton(21, 2, 9, 12, 0)
-    self.addLabel(31, 14 - 2 * self.fontSize, 15, self.fontSize, "Patch", italic=True)
-    self.addLabel(31, 14 - 1 * self.fontSize, 15, self.fontSize, "Select", italic=True)
+    self.addLabel(31, 14 - self.button_font.text_height, 15, "Patch", font=self.button_font)
+    self.addLabel(31, 14, 15, "Select", font=self.button_font)
 
     # pitch bend
     self.addWheel(29.5, 26, 0, 'pitch_bend', autocenter=True)
-    self.addShowDrawing(46.5, 26, 4, 66, Drawings.PitchBend, colors={'all':'white','dot':'white'})
+    self.addShowDrawing(46.5, 26, 4, 66, Drawings.PitchBend, colors={'all':'white', 'dot':'white'})
 
     # modulation
     self.addWheel(66.5, 26, 2, "mod_wheel")
@@ -523,10 +539,10 @@ class ViewBuilder:
     self.addAccentColoredLine(0, 99, 28, 1.2)
     
     line = self.addAccentColoredLine(29.5, 99, 35.5, 1.2)
-    self.addLabelAbove(29.5, line, 15, self.fontSize, "Pitch", bold=True)
+    self.addLabelAbove(29.5, line, 15, "Pitch", font=self.accent_line_font)
 
     line = self.addAccentColoredLine(66.5, 99, 41.5, 1.2)
-    self.addLabelAbove(66.5, line, 15, self.fontSize, "Mod", bold=True)
+    self.addLabelAbove(66.5, line, 15, "Mod", font=self.accent_line_font)
 
     return self.endGroup()
   
@@ -536,12 +552,12 @@ class ViewBuilder:
 
     self.addPatchSelectButton(6, 2, 9, 12, 1)
     self.addPatchSelectButton(21, 2, 9, 12, 0)
-    self.addLabel(31, 14 - 2 * self.fontSize, 15, self.fontSize, "Patch", italic=True)
-    self.addLabel(31, 14 - 1 * self.fontSize, 15, self.fontSize, "Select", italic=True)
+    self.addLabel(31, 14 - self.button_font.text_height, 15, "Patch", self.button_font)
+    self.addLabel(31, 14, 15, "Select", self.button_font)
 
     # pitch bend
     self.addWheel(20, 26, 0, 'pitch_bend', autocenter=True)
-    self.addShowDrawing(37, 26, 4, 66, Drawings.PitchBend, colors={'all':'white','dot':'white'})
+    self.addShowDrawing(37, 26, 4, 66, Drawings.PitchBend, colors={'all':'white', 'dot':'white'})
 
     # modulation
     self.addWheel(53, 26, 2, "mod_wheel")
@@ -551,10 +567,10 @@ class ViewBuilder:
     self.addAccentColoredLine(0, 99, 18.5, 1.2)
     
     line = self.addAccentColoredLine(20, 99, 31.5, 1.2)
-    self.addLabelAbove(20, line, 15, self.fontSize, "Pitch", bold=True)
+    self.addLabelAbove(20, line, 15, "Pitch", self.accent_line_font)
 
     line = self.addAccentColoredLine(53, 99, 33, 1.2)
-    self.addLabelAbove(53, line, 15, self.fontSize, "Mod", bold=True)
+    self.addLabelAbove(53, line, 15, "Mod", self.accent_line_font)
 
     return self.endGroup()
   
@@ -592,6 +608,11 @@ class ViewBuilder:
   def addShowDrawing(self, x:float, y:float, w:float, h:float, drawing: SVGDrawing, colors: dict[str, str]|None = None):
     return self.add(ShowDrawing(Rect(x, y, w, h), drawing, dict() if colors is None else colors))
 
+  def addMultiPageChevrons(self, labels:list[Label]):
+    return self.add(MultiPageChevrons(labels))
+  
+  def addWhiteLineAround(self, label:Label, thickness:float = 0.25):
+    return self.add(WhiteLineAround(label, thickness))
 
 
 class PanelViewBuilder(ViewBuilder):
@@ -645,7 +666,7 @@ class TabletViewBuilder(ViewBuilder):
     # The colored line along the base:
     self.addAccentColoredLine(0, self.accent_line_y, 30, 1.2)
     # And the label above it:
-    self.addLabel(0, self.label_y, 35, self.fontSize, "Volume", bold=True)
+    self.addLabel(0, self.accent_line_label_y, 35, "Volume", font=self.accent_line_font)
 
     self.endGroup()
 
@@ -665,7 +686,7 @@ class TabletViewBuilder(ViewBuilder):
     # The colored line along the base:
     self.addAccentColoredLine(0, self.accent_line_y, 40, 1.2)
     # And the labels above it:
-    self.addLabel(0, self.label_y, 35, self.fontSize, "Patch Select", bold=True)
+    self.addLabel(0, self.accent_line_label_y, 35, "Patch Select", font=self.accent_line_font)
     self.endGroup()
 
     self.beginGroup("CompactValueSlider", Vector(32, y0 - 13))
@@ -683,7 +704,7 @@ class TabletViewBuilder(ViewBuilder):
     # The colored line along the base:
     self.addAccentColoredLine(0, self.accent_line_y, x1 - 32, 1.2)
     # And the labels above it:
-    self.addLabel(0, self.label_y, 35, self.fontSize, "Data Entry", bold=True)
+    self.addLabel(0, self.accent_line_label_y, 35, "Data Entry", font=self.accent_line_font)
 
     self.endGroup()
 
@@ -725,17 +746,18 @@ class FullViewBuilder(ViewBuilder):
     cart_inside = cart_outside.inset(1.5, 1.5)
     cart = self.add(Rectangle(cart_outside, 'body_down'))
     self.add(Rectangle(cart_inside, 'body_up'))
-    self.addLabelAbove(cart_outside.x, cart, cart_outside.w, self.fontSize, "Cartridge", italic=True)
+    self.addLabelAbove(cart_outside.x, cart, cart_outside.w, "Cartridge", font=self.button_font)
 
     self.addBackPanel(Vector(0, -32))
 
     self.addRectangle(0, 121.5, 845, 32 + 138, 'body')
 
+    font = self.text_renderer.getFont('Panel').scaledToTextHeight(self.button_font.text_height)
     self.onCondition("hasSeq")
     if self.isTrue():
-      self.addLabel(13, 7, 88, self.fontSize, "MUSIC PRODUCTION SYNTHESIZER", alignment=Alignment.STRETCH_LEFT)
+      self.addLabel(13, 7 + font.baseline, 88, "MUSIC PRODUCTION SYNTHESIZER", font, alignment=Alignment.STRETCH)
     if self.isFalse():
-      self.addLabel(13, 7, 88, self.fontSize, "DYNAMIC COMPONENT SYNTHESIZER", alignment=Alignment.STRETCH_LEFT)
+      self.addLabel(13, 7 + font.baseline, 88, "DYNAMIC COMPONENT SYNTHESIZER",  font, alignment=Alignment.STRETCH)
     self.endCondition();
 
     y_bottom = 121.5 - 17
@@ -768,20 +790,24 @@ class FullViewBuilder(ViewBuilder):
       self.addShowDrawing(760, y_bottom - 10.56, 72, 10.56, Drawings.EnsoniqLogo)
 
     else:
+      font = self.text_renderer.getFont('Panel').scaledToTextHeight(12)
       self.addShowDrawing(760, 90, 72, 13, Drawings.FakeEnsoniqLogo)
-      self.add(Label(Rect(762, 92, 68, 9), "ensoniq", 9, bold=True, alignment=Alignment.STRETCH))
+      self.add(Label(762, 90.5 + font.baseline - font.above_text, 68, "ensoniq", font=font, alignment=Alignment.STRETCH))
 
       self.onCondition('isSd1')
       if self.isTrue():
+        sd1Font = self.text_renderer.getFont('Panel').scaledToCapHeight(27)
         self.onCondition('isSd132')
         if self.isTrue():
           # SD-1/32:
+          voiceFont = self.text_renderer.getFont('Panel').scaledToCapHeight(5)
+
           self.addRectangle(13, y_bottom - 7, 67, 7, 'accent')
-          self.addLabel(14, y_bottom - 6, 65, 5, "3      2      -      V      O      I      C      E", alignment=Alignment.STRETCH, color = 'panel')
-          self.addLabel(13, y_bottom - 37, 67, 27, "SD-1", alignment=Alignment.STRETCH_LEFT)
+          self.addLabel(14, y_bottom - 1, 65, "3      2      -      V      O      I      C      E", voiceFont, alignment=Alignment.STRETCH, color = 'panel')
+          self.addLabel(13, y_bottom - 10, 67, "SD-1", sd1Font, alignment=Alignment.STRETCH)
         if self.isFalse():
           # SD-1 (21)
-          self.addLabel(13, y_bottom - 27, 67, 27, "SD-1", alignment=Alignment.STRETCH_LEFT)
+          self.addLabel(13, y_bottom, 67, "SD-1", sd1Font, alignment=Alignment.STRETCH)
 
         self.endCondition()
     
@@ -790,11 +816,13 @@ class FullViewBuilder(ViewBuilder):
         self.onCondition('hasSeq')
         if self.isTrue():
           # VFX-SD
-          self.addLabel(13, y_bottom - 27, 67, 27, "VFX-SD", alignment=Alignment.STRETCH_LEFT)
+          font = self.text_renderer.getFont('Panel').scaledToAscent(27)
+          self.addLabel(13, y_bottom, 67, "VFX-SD", font, alignment=Alignment.STRETCH)
 
         if self.isFalse():
           # VFX
-          self.addLabel(13, y_bottom - 34, 92, 43, "VFX", alignment=Alignment.STRETCH_LEFT)
+          font = self.text_renderer.getFont('Panel').scaledToAscent(43)
+          self.addLabel(13, y_bottom, 92, "VFX", font, alignment=Alignment.STRETCH)
 
         self.endCondition()
       self.endCondition()
@@ -807,27 +835,27 @@ class FullViewBuilder(ViewBuilder):
     self.addRectangle(-(5 + 7 + 108 + 7 + 5 + 2), -32, 5 + 7 + 108 + 7 + 5, h_total, 'body')
 
     self.addShowDrawing(-127, 13, 118, 96, Drawings.StorageCutout, colors = {
-      'top':'body_down',
-      'left':'body_down',
-      'right': 'body_up',
-      'bottom': 'body_up_shallow',
+      'top': 'body_down', 
+      'left': 'body_down', 
+      'right': 'body_up', 
+      'bottom': 'body_up_shallow', 
     })
 
     self.addShowDrawing(-127, 129.5, 118, 162, Drawings.WheelAndFloppyArea, colors = {
-      'left':'body_down',
-      'right': 'body_up',
-      'back': 'body_down',
+      'left': 'body_down', 
+      'right': 'body_up', 
+      'back': 'body_down', 
     })
 
     self.onCondition('hasSeq')
     if self.isTrue():
       show_floppy = self.addShowDrawing(-119, 129.5, 102, 13, Drawings.Floppy, colors = {
-        'top':'black_plastic',
-        'front':'black_plastic_shade',
-        'slot_outer':'black_plastic_dark',
-        'slot_inner': 'black_plastic_darker',
-        'button':'black_plastic_dark',
-        'led':'light_off',
+        'top': 'black_plastic', 
+        'front': 'black_plastic_shade', 
+        'slot_outer': 'black_plastic_dark', 
+        'slot_inner': 'black_plastic_darker', 
+        'button': 'black_plastic_dark', 
+        'led': 'light_off', 
       })
       floppy_factor = cast(ShowDrawing, show_floppy).bounds.h / Drawings.Floppy.bounds.h 
       self.addLight(-56, 129.5 + floppy_factor * 22.5, 5, floppy_factor * 2.0, 16)
@@ -838,7 +866,7 @@ class FullViewBuilder(ViewBuilder):
     self.addKeyboard("full_keyboard", Vector(0, 121.5 + 32), 3, 5)
 
     self.addEllipse(2, 121.5 + 8, 6, 6, 'screwhead')    
-    self.addEllipse(845 - 8, 121.5 + 8, 6, 6, 'screwhead')    
+    self.addEllipse(845 - 8, 121.5 + 8, 6, 6, 'screwhead')
 
     background.bounds = self.view.bounds
 

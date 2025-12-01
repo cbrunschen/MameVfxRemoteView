@@ -2,6 +2,7 @@
 
 from typing import overload, reveal_type
 from dataclasses import dataclass
+from copy import copy, replace
 
 from myxml import *
 from util import *
@@ -37,6 +38,9 @@ class Rect:
   y: float
   w: float
   h: float
+
+  def copy(self):
+    return copy(self)
 
   @property
   def origin(self):

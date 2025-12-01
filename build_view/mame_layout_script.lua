@@ -291,18 +291,18 @@ local pressure_hysteresis = 3
 
 -- The ranges where we can find the tops of the 12 keys within an octave
 local k12 = {
-	{ key=0, x0=0, x1=79027/1000000, black=false, l = l_white },
-	{ key=1, x0=1769/20000, x1=807/5000, black=true, l = l_black },
-	{ key=2, x0=8541/50000, x1=4997/20000, black=false, l = l_white },
-	{ key=3, x0=25927/100000, x1=16611/50000, black=true, l = l_black },
-	{ key=4, x0=8541/25000, x1=42067/100000, black=false, l = l_white },
-	{ key=5, x0=1707/4000, x1=4997/10000, black=false, l = l_white },
-	{ key=6, x0=1591/3125, x1=58207/100000, black=true, l = l_black },
-	{ key=7, x0=59149/100000, x1=16611/25000, black=false, l = l_white },
-	{ key=8, x0=33693/50000, x1=74681/100000, black=true, l = l_black },
-	{ key=9, x0=75623/100000, x1=41459/50000, black=false, l = l_white },
-	{ key=10, x0=4193/5000, x1=18231/20000, black=true, l = l_black },
-	{ key=11, x0=92097/100000, x1=3106/3125, black=false, l = l_white },
+	{ key=0,  x0=0,            x1=79027/1000000, black=false, l = l_white },
+	{ key=1,  x0=1769/20000,   x1=807/5000,      black=true,  l = l_black },
+	{ key=2,  x0=8541/50000,   x1=4997/20000,    black=false, l = l_white },
+	{ key=3,  x0=25927/100000, x1=16611/50000,   black=true,  l = l_black },
+	{ key=4,  x0=8541/25000,   x1=42067/100000,  black=false, l = l_white },
+	{ key=5,  x0=1707/4000,    x1=4997/10000,    black=false, l = l_white },
+	{ key=6,  x0=1591/3125,    x1=58207/100000,  black=true,  l = l_black },
+	{ key=7,  x0=59149/100000, x1=16611/25000,   black=false, l = l_white },
+	{ key=8,  x0=33693/50000,  x1=74681/100000,  black=true,  l = l_black },
+	{ key=9,  x0=75623/100000, x1=41459/50000,   black=false, l = l_white },
+	{ key=10, x0=4193/5000,    x1=18231/20000,   black=true,  l = l_black },
+	{ key=11, x0=92097/100000, x1=3106/3125,     black=false, l = l_white },
 }
 
 -- 85 equally sized ranges that each contain exactly one key, and the key
@@ -452,7 +452,7 @@ function KeyboardHandler:create(view, clickarea_id, key_id_prefix, port_prefix, 
 		key.item:set_animation_state_callback(function()
 			new_state = 0
 			if key.pressure > 0 then
-				new_state = 128 + key.pressure
+				new_state = 127 + key.pressure
 			elseif key.velocity > 0 then
 				new_state = key.velocity
 			else

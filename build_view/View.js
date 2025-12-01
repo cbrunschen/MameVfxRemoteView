@@ -689,7 +689,7 @@ class Key {
 
   updateColor() {
     if (this.pressure > 0) {
-      let map = 100.0 * (this.pressure / 127.0);
+      let map = 100.0 * ((this.pressure - 1) / 126.0);
       let mip = 100.0 - map; 
       this.element.setAttribute("fill", 
         `color-mix(in srgb, ${this.color_pressure_min} ${mip}%, ${this.color_pressure_max} ${map}%)`);
@@ -720,7 +720,7 @@ class Key {
       if (this.velocity == 0) {
         this.grab(e);
       } else {
-        this.pressure = 64;this
+        this.pressure = 64;
         this.updateColor();
       }
     }
@@ -778,9 +778,251 @@ class Key {
 }
 
 class Keyboard {
+  octave_shift = 164.5
+  w_white = 22.5
+  f_white = w_white / (w_white + 1)
+  l_black = 88
+  l_white = 138
+  y_12 = (l_black + 2) / l_white
+  y_12_0 = l_black / l_white
+
+  strike_both_bottom = l_black - 3
+  strike_both_top = l_black - 43
+
+  strike_white_low_bottom = l_white - 3
+  strike_white_low_top = l_white - 43
+
+  strike_white_break = (strike_both_bottom + strike_white_low_top) / 2
+
+  pressure_length = 25
+  pressure_hysteresis = 3
+
+  // The ranges where we can find the tops of the 12 keys within an octave
+  k12 = [
+    { key:0,  x0:0,            x1:79027/1000000, black:false, l:l_white },
+    { key:1,  x0:1769/20000,   x1:807/5000,      black:true,  l:l_black },
+    { key:2,  x0:8541/50000,   x1:4997/20000,    black:false, l:l_white },
+    { key:3,  x0:25927/100000, x1:16611/50000,   black:true,  l:l_black },
+    { key:4,  x0:8541/25000,   x1:42067/100000,  black:false, l:l_white },
+    { key:5,  x0:1707/4000,    x1:4997/10000,    black:false, l:l_white },
+    { key:6,  x0:1591/3125,    x1:58207/100000,  black:true,  l:l_black },
+    { key:7,  x0:59149/100000, x1:16611/25000,   black:false, l:l_white },
+    { key:8,  x0:33693/50000,  x1:74681/100000,  black:true,  l:l_black },
+    { key:9,  x0:75623/100000, x1:41459/50000,   black:false, l:l_white },
+    { key:10, x0:4193/5000,    x1:18231/20000,   black:true,  l:l_black },
+    { key:11, x0:92097/100000, x1:3106/3125,     black:false, l:l_white },
+  ];
+
+  // 85 equally sized ranges that each contain exactly one key, and the key
+  // thaty they contain, so we can check for being outside the edge
+  x_to_k12 = [
+    k12[1], k12[1], k12[1], k12[1], k12[1], k12[1], k12[1],
+    k12[2], k12[2], k12[2], k12[2], k12[2], k12[2], k12[2],
+    k12[3], k12[3], k12[3], k12[3], k12[3], k12[3], k12[3], k12[3],
+    k12[4], k12[4], k12[4], k12[4], k12[4], k12[4], k12[4],
+    k12[5], k12[5], k12[5], k12[5], k12[5], k12[5], k12[5],
+    k12[6], k12[6], k12[6], k12[6], k12[6], k12[6], k12[6],
+    k12[7], k12[7], k12[7], k12[7], k12[7], k12[7], k12[7],
+    k12[8], k12[8], k12[8], k12[8], k12[8], k12[8], k12[8],
+    k12[9], k12[9], k12[9], k12[9], k12[9], k12[9], k12[9],
+    k12[10], k12[10], k12[10], k12[10], k12[10], k12[10], k12[10],
+    k12[11], k12[11], k12[11], k12[11], k12[11], k12[11], k12[11],
+    k12[12], k12[12], k12[12], k12[12], k12[12], k12[12], k12[12],
+  ];
+
+  static makeFindKey(n_octaves) {
+    let octaves_width = n_octaves * octave_shift;
+    let full_width = octaves_width + w_white;
+
+    function find_12_key(x, y, w, h) {
+      if (x > octaves_width) {
+        return 12 * n_octaves;
+      }
+
+      let octave, kx = math.modf((x / w) * (full_width / octave_shift))
+      if (octave == n_octaves) {
+        return 12 * octave;
+      }
+
+      let ki = math.floor(85 * kx);
+      let candidate = x_to_k12[ki + 1];
+      if (candidate == null)
+        return null;
+      
+      let ci = 12 * octave + candidate.key;
+      if (candidate.x0 <= kx && kx <= candidate.x1) {
+        if (candidate.black) {
+          rel_y = y / h;
+          if (rel_y <= y_12_0) {
+            return ci;
+          } else {
+            return null;
+          }
+        } else {
+          return ci;
+        }
+      } else {
+        return null;
+      }
+    }
+
+    function find_7_key(x, w) {
+      let octave, kx = math.modf((x / w) * (full_width / octave_shift));
+      let ki, kkx = math.modf(7 * kx);
+      if (kkx <= f_white) {
+        if (ki < 3) {
+          return 12 * octave + 2 * ki;
+        } else {
+          return 12 * octave + 2 * ki - 1;
+        }
+      }
+      return null;
+    }
+
+    return function (x, y, w, h) {
+      rel_y = y / h;
+      if (rel_y < 0 || 1 < rel_y) {
+        return null;
+      } else if (rel_y < y_12) {
+        return find_12_key(x, y, w, h);
+      } else {
+        return find_7_key(x, w);
+      }
+    }
+  }
+
   constructor(x, y, w, h, keys) {
     
+    // Bind the gesture handlers to this instance.
+    this.gestureStart = this.gestureStart.bind(this);
+    this.gestureMove = this.gestureMove.bind(this);
+    this.gestureEnd = this.gestureEnd.bind(this);
+    this.gestureCancel = this.gestureCancel.bind(this);
+
+    // Now set the event handlers:
+    // Check if pointer events are supported.
+    // if (window.PointerEvent) {
+    //   console.log("Adding Pointer Event handlers");
+    //   // Pointer events are supported, use those.
+    //   // Add Pointer Event Listener
+    //   this.addEventListener('pointerdown', this.gestureStart, { capture: true, passive: false });
+    //   this.addEventListener('pointermove', this.gestureMove, { capture: true, passive: false });
+    //   this.addEventListener('pointerup', this.gestureEnd, { capture: true, passive: false });
+    //   this.addEventListener('pointercancel', this.gestureCancel, { capture: true, passive: false });
+    // } else {
+      console.log("Adding Touch and Mouse Event handlers");
+      // Pointer events are _not_ supported, use touch and mouse events instead.
+      // Add Touch Listener
+      this.addEventListener('touchstart', this.gestureStart, { capture: true, passive: false });
+      this.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
+      this.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
+      this.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
+      this.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
+      this.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
+      this.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
+
+      // Add Mouse Listener
+      this.addEventListener('mousedown', this.gestureStart, { capture: true, passive: false });
+    // }
   }
+
+
+  gestureStart(e) {
+    console.log(`gestureStart(${e})`)
+    e.preventDefault();
+
+    let first = (e.touches == null) || (e.touches.length == 1);
+
+    if (first) {
+      // Add the move and end listeners
+      // if (window.PointerEvent) {
+      //   e.target.setPointerCapture(e.pointerId);
+      //   console.log(`- capturing pointer ${e.pointerId}`)
+      // } else {
+        // Add Mouse Listeners
+        document.addEventListener('mousemove', this.gestureMove, true);
+        document.addEventListener('mouseup', this.gestureEnd, true);
+      // }
+    }
+
+    if (e.touches) {
+      for (var i = 0; i < e.targetTouches.length; i++) {
+        var touch = e.targetTouches.item(i);
+        this.activeTouches.set(touch.identifier, touch);
+      }
+
+      let center = TouchPoint.center(this.activeTouches);
+      if (center != null) {
+        this.grab(center.x, center.y);
+      }
+    } else {
+      this.grab(e.clientX, e.clientY);
+    }
+  }
+
+  gestureMove(e) {
+    console.log(`gestureMove(${e})`)
+    e.preventDefault();
+
+    if (e.touches) {
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        var touch = e.changedTouches.item(i);
+        if (this.activeTouches.has(touch.identifier)) {
+          this.activeTouches.set(touch.identifier, touch);
+        }
+      }
+      let center = TouchPoint.center(this.activeTouches);
+      if (center != null) {
+        this.drag(center.x, center.y);
+      }
+    } else {
+      this.drag(e.clientX, e.clientY);
+    }
+  }
+
+  gestureEnd(e) {
+    console.log(`gestureEnd(${e})`)
+    e.preventDefault();
+
+    let last = (e.touches == null) || (e.touches.length == 0);
+
+    if (last) {
+      // Remove Event Listeners
+      // if (window.PointerEvent) {
+      //   console.log(`- releasing pointer ${e.pointerId}`)
+      //   e.target.releasePointerCapture(e.pointerId);
+      // } else {
+        // Remove Mouse Listeners
+        document.removeEventListener('mousemove', this.gestureMove, true);
+        document.removeEventListener('mouseup', this.gestureEnd, true);
+      // }
+    }
+
+    if (e.touches) {
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        var touch = e.changedTouches.item(i);
+        this.activeTouches.delete(touch.identifier)
+      }
+      if (this.activeTouches.size > 0) {
+        let center = TouchPoint.center(this.activeTouches);
+        if (center != null) {
+          this.grab(center.x, center.y);
+        }
+      } else {
+        this.release();
+      }
+    } else {
+      this.release();
+    }
+  }
+
+  gestureCancel(e) {
+    console.log(`gestureCancel(${e})`)
+    e.preventDefault();
+
+    this.gestureEnd(e);
+  }
+
 }
 
 function makeRectPath(x, y, w, h, color) {
@@ -1194,23 +1436,56 @@ class Connector {
     return button;
   }
 
-  addLabel(x, y, w, h, label, fontSize, bold = false, italic = false, centered = False, stretched = False, color = null) {
-    if (color == null) {
-      color = 'white'
-    }
+  makeLabelText(fontSize, bold = false, italic = false) {
+    let factor = this.fontSizeFactors[bold ? (italic ? 'bold_italic' : 'bold') : (italic ? 'italic' : '')];
     var labelText = createElement("text");
-    labelText.setAttribute('fill', color);
-    labelText.setAttribute('stroke', 'none');
-    labelText.setAttribute('font-size', fontSize);
-    labelText.setAttribute('font-family', 'Helvetica');
+    labelText.setAttribute('font-size', `${fontSize * factor}`);
+    labelText.setAttribute('font-family', 'Panel');
     if (bold) {
       labelText.setAttribute('font-weight', 'bold');
     }
     if (italic) {
       labelText.setAttribute('font-style', 'italic');
     }
-    labelText.setAttribute('y', y);
-    labelText.setAttribute('dominant-baseline', 'text-before-edge');
+    return labelText;
+  }
+
+  fontSizeFactor(bold = false, italic = false) {
+    let canvas = document.getElementById("measure");
+
+    let scale = 10000;
+    let font = `${scale}px`;
+    if (bold) font = `${font} bold`;
+    if (italic) font = `${font} italic`;
+    font = `${font} Panel`;
+
+    let ctx = canvas.getContext("2d");
+    ctx.textBaseline = "alphabetic";
+    ctx.font = font;
+   
+    let m = ctx.measureText("Mlj");
+    
+    let ascent = m.fontBoundingBoxAscent;
+    let descent = m.fontBoundingBoxDescent;
+    let text_up = m.actualBoundingBoxAscent;
+    let text_down = m.actualBoundingBoxDescent;
+
+    console.log(`Measuring '${font}': ascent=${ascent}, descent=${descent}, up=${text_up}, down=${text_down}`);
+
+    let factor = scale / (text_up + text_down);
+
+    console.log(`font size factor for '${font} = ${factor}`);
+    return factor;
+  }
+
+  addLabel(x, y, w, label, fontSize, bold = false, italic = false, centered = False, stretched = False, color = null) {
+    if (color == null) {
+      color = 'white'
+    }
+    let labelText = this.makeLabelText(fontSize, bold, italic);
+    labelText.setAttribute('fill', color);
+    labelText.setAttribute('stroke', 'none');
+    labelText.setAttribute('y', y + 0.01 * fontSize);
     if (centered) {
       labelText.setAttribute('x', x + w/2);
       labelText.setAttribute('text-anchor', 'middle');
@@ -1275,6 +1550,16 @@ class Connector {
     this.decorationsContainer.appendChild(rectangle);
   }
 
+  addEllipse(x, y, w, h, color) {
+    let ellipse = createElement("ellipse");
+    ellipse.setAttribute("cx", x + w/2);
+    ellipse.setAttribute("cy", y + h/2);
+    ellipse.setAttribute("rx", w / 2);
+    ellipse.setAttribute("ry", h / 2);
+    ellipse.setAttribute("fill", color);
+    this.decorationsContainer.appendChild(ellipse);
+  }
+
   makeFilledPath(path, color) {
     let element = createElement("path")
     element.setAttribute("stroke", "none");
@@ -1287,9 +1572,31 @@ class Connector {
     this.decorationsContainer.appendChild(this.makeFilledPath(path, color));
   }
 
+  addKeyboard(x, y, w, h, color) {
+    let rectangle = createElement("rect");
+    rectangle.setAttribute("x", x);
+    rectangle.setAttribute("y", y);
+    rectangle.setAttribute("width", w);
+    rectangle.setAttribute("height", h);
+    rectangle.setAttribute("rx", 2);
+    rectangle.setAttribute("fill", color);
+    this.decorationsContainer.appendChild(rectangle);
+  }
+
   addKey(x, y, w, h, keyNumber, black, path) {
     let key = new Key(x, y, keyNumber, black, path)
     this.mainContainer.appendChild(key.element);
+  }
+
+  addPath(x, y, d, fill=null, stroke=null, stroke_width=null) {
+    const path = createElement("path");
+    path.setAttribute("transform", `translate(${x} ${y})`);
+    path.setAttribute("y", y);
+    path.setAttribute("d", d);
+    if (fill != null) path.setAttribute("fill", fill);
+    if (stroke != null) path.setAttribute("stroke", stroke);
+    if (stroke_width != null) path.setAttribute("stroke-width", stroke_width);
+    this.decorationsContainer.appendChild(path);
   }
 
   addDrawing(x, y, w, h, viewBox, contents) {
@@ -1314,7 +1621,7 @@ class Connector {
     }
     this.decorationsContainer.appendChild(svg);
   }
- 
+
   selectView(view) {
     var oldDisplay = this.display;
     var oldLights = this.lights;
@@ -1360,7 +1667,19 @@ class Connector {
     this.keyboard = keyboard;
     this.view = view;
 
-    // and (re-)populate the root.
+    console.log("Getting font size factors:");
+    this.fontSizeFactors = {
+      '': this.fontSizeFactor(false, false),
+      'bold' : this.fontSizeFactor(true, false),
+      'italic': this.fontSizeFactor(false, true),
+      'bold,italic': this.fontSizeFactor(true, true),
+    };
+    
+    this.fontSizeFactor(true, false);
+    this.fontSizeFactor(false, true);
+    this.fontSizeFactor(true, true);
+
+    // Now (re-)populate the root.
     this.decorationsContainer = createElement("g");
     this.root.appendChild(this.decorationsContainer);
 
@@ -1421,7 +1740,7 @@ class Connector {
     this.messageText.setAttribute('fill', "#aaaaaaff");
     this.messageText.setAttribute('stroke', 'none');
     this.messageText.setAttribute('font-size', `${messageRect.h}`);
-    this.messageText.setAttribute('font-family', 'Helvetica');
+    this.messageText.setAttribute('font-family', 'Panel');
     this.messageText.setAttribute('font-style', 'italic');
     this.messageText.setAttribute('text-anchor', 'middle');
     this.messageText.setAttribute('dominant-baseline', 'middle');
@@ -1430,6 +1749,8 @@ class Connector {
 
     this.root.appendChild(this.messageBox);
   }
+
+
 
   startConnection() {
     this.needRefresh = true;
