@@ -9,7 +9,7 @@ out
 *.dmg
 *.msi
 *.exe
-*.zip
+#*.zip
 *.trace
 [oO]utput
 [tT]esting
