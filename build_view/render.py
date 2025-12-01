@@ -259,7 +259,6 @@ class TextRenderer:
 
   INITIAL_SIZE = 256 * Pango.SCALE
 
-
   def getFamily(self, font_family: str):
     if font_family == 'Panel':
       return 'Arimo'

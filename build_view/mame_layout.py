@@ -734,20 +734,20 @@ class MameLayoutVisitor(ViewVisitor):
 
   def visitWhiteLineAround(self, line: 'WhiteLineAround'):
     bounds = line.label.bounds.copy()
-    eprint(f'visiting white line around \'{line.label.text}\' in {bounds}')
+    dprint(f'visiting white line around \'{line.label.text}\' in {bounds}')
     # For now at least, generate font metrics ourselves ...
     tw = self.text_renderer.textWidth(line.label.text, line.label.font) + 2
-    eprint(f'text width is {tw}')
+    dprint(f'text width is {tw}')
     x0 = bounds.x
     w = (bounds.w - tw) / 2
-    eprint(f'({bounds.w} - {tw}) / 2 = {w}')
+    dprint(f'({bounds.w} - {tw}) / 2 = {w}')
     x1 = bounds.x + (bounds.w + tw) / 2
     h = line.thickness
     y = bounds.y + 0.5 * (bounds.h - h)
 
     r0 = Rect(x0, y, w, h)
     r1 = Rect(x1, y, w, h)
-    eprint(f'drawing white rectangles {r0} and {r1}')
+    dprint(f'drawing white rectangles {r0} and {r1}')
     self.visitRectangle(Rectangle(r0, 'white'))
     self.visitRectangle(Rectangle(r1, 'white'))
 
