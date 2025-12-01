@@ -22,4 +22,9 @@ shift $(($OPTIND - 1))
 for K in vfx vfxsd sd1 sd132; do
   mkdir -p "${OUTPUT}/${K}"
   ${PRG} -l ${K} -io 'panel:' -tp -rl $@ > "${OUTPUT}/${K}/${K}.lay"
+  pushd "${OUTPUT}"
+  zip -r "${K}.zip" "${K}"
+  popd
+  rm "${OUTPUT}/${K}/${K}.lay"
+  rmdir "${OUTPUT}/${K}"
 done
