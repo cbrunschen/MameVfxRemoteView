@@ -22,6 +22,7 @@ def main():
   parser.add_argument('-f', '--fonts', action=BooleanOptionalAction, default=False)
   parser.add_argument('-hc', '--hexcolors', action=BooleanOptionalAction, default=False)
   parser.add_argument('-tp', '--text-paths', action=BooleanOptionalAction, default=False)
+  parser.add_argument('-sp', '--segment-paths', action=BooleanOptionalAction, default=False)
   parser.add_argument('--debug', action='store_true', default=False)
   # parser.add_argument('-fs', '--fontsize', default=1.4)
 
@@ -38,7 +39,8 @@ def main():
       args.layout, args.io_port_prefix, 
       fonts=args.fonts, 
       hexcolors=args.hexcolors, 
-      text_paths=args.text_paths
+      text_paths=args.text_paths,
+      segment_paths=args.segment_paths
     )
   
   views = {
