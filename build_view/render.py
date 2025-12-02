@@ -89,7 +89,6 @@ class Cubic:
     return (v_min, v_max)
 
 
-
 @dataclass
 class Metrics:
   height: float
@@ -98,6 +97,7 @@ class Metrics:
   above_text: float
   ascent: float
   descent: float
+  cap_height: float
   scale: float = 1.0
 
   @property
@@ -122,7 +122,8 @@ class Metrics:
       self.text_down * scale, 
       self.above_text * scale, 
       self.ascent * scale, 
-      self.descent * scale, 
+      self.descent * scale,
+      self.cap_height * scale,
       self.scale * scale)
     
   def __imul__(self, scale):
@@ -132,6 +133,7 @@ class Metrics:
     self.above_text *= scale
     self.ascent     *= scale
     self.descent    *= scale
+    self.cap_height *= scale
     self.scale      *= scale
     return self
     
@@ -143,6 +145,7 @@ class Metrics:
       self.above_text / scale, 
       self.ascent / scale, 
       self.descent / scale,
+      self.cap_height / scale,
       self.scale / scale)
 
   def __idiv__(self, scale):
@@ -152,6 +155,7 @@ class Metrics:
     self.above_text /= scale
     self.ascent     /= scale
     self.descent    /= scale
+    self.cap_height /= scale
     self.scale      /= scale
     return self
   
@@ -174,8 +178,8 @@ class Metrics:
   def scaledToHeight(self, height: float):
     return self.scaledTo('height', height)
 
-  def scaledToCapHeight(self, text_up):
-    return self.scaledTo('text_up', text_up)
+  def scaledToCapHeight(self, cap_height):
+    return self.scaledTo('cap_height', cap_height)
 
   def scaledToTextHeight(self, text_height):
     return self.scaledTo('text_height', text_height)
@@ -191,6 +195,10 @@ class Font:
   metrics: Metrics
   bold: bool = field(kw_only=True, default=False)
   italic: bool = field(kw_only=True, default=False)
+
+  @property
+  def scale(self):
+    return self.metrics.scale
 
   @property
   def text_height(self):
@@ -240,8 +248,8 @@ class Font:
   def scaledToHeight(self, height: float):
     return self.scaledTo('height', height)
 
-  def scaledToCapHeight(self, text_up):
-    return self.scaledTo('text_up', text_up)
+  def scaledToCapHeight(self, cap_height):
+    return self.scaledTo('cap_height', cap_height)
 
   def scaledToTextHeight(self, text_height):
     return self.scaledTo('text_height', text_height)
@@ -264,79 +272,58 @@ class TextRenderer:
       return 'Arimo'
     return font_family
   
-  def measure(self, s: str, font: Font):
-    font_family = self.getFamily(font.family)
-    desc = Pango.FontDescription()
-    desc.set_family(font_family)
-    # Always render fonts at a large size - 256 points! - so we don't trigger low-resolution hinting.
-    desc.set_size(self.INITIAL_SIZE)
-    desc.set_style(Pango.Style.ITALIC if font.italic else Pango.Style.NORMAL)
-    desc.set_weight(Pango.Weight.BOLD if font.bold else Pango.Weight.NORMAL)
+  def measure_path(self, path):
+    dprint(f'measuring path {path}')
 
-    with io.BytesIO() as result, cairo.SVGSurface(result, self.INITIAL_SIZE, self.INITIAL_SIZE) as surface:
-      ctx = cairo.Context(surface)
-      layout = PangoCairo.create_layout(ctx)
-      layout.set_text(s)
-      pctx = layout.get_context()
-      pctx.set_font_map(self.font_map)
-      pctx.set_font_description(desc)
+    current_y = 0
+    y_min = float('inf')
+    y_max = float('-inf')
+    current_x = 0
+    x_min = float('inf')
+    x_max = float('-inf')
 
-      current_y = 0
-      y_min = float('inf')
-      y_max = float('-inf')
-      current_x = 0
-      x_min = float('inf')
-      x_max = float('-inf')
+    def m(x, y):
+      nonlocal current_x, current_y
+      current_x, current_y = x, y
 
-      def m(x, y):
-        nonlocal current_x, current_y
-        current_x, current_y = x, y
+    def ux(x):
+      nonlocal current_x, x_min, x_max
+      x_min = min(x_min, current_x, x)
+      x_max = max(x_max, current_x, x)
+      current_x = x
 
-      def ux(x):
-        nonlocal current_x, x_min, x_max
-        x_min = min(x_min, current_x, x)
-        x_max = max(x_max, current_x, x)
-        current_x = x
+    def uy(y):
+      nonlocal current_y, y_min, y_max
+      y_min = min(y_min, current_y, y)
+      y_max = max(y_max, current_y, y)
+      current_y = y
 
-      def uy(y):
-        nonlocal current_y, y_min, y_max
-        y_min = min(y_min, current_y, y)
-        y_max = max(y_max, current_y, y)
-        current_y = y
+    def u(x, y):
+      ux(x)
+      uy(y)
 
-      def u(x, y):
-        ux(x)
-        uy(y)
+    def pe(element):
+      nonlocal current_x, current_y
+      type, points = element
+      if type == cairo.PATH_MOVE_TO:
+        m(*points)
+      elif type == cairo.PATH_LINE_TO:
+        u(*points)
+      elif type == cairo.PATH_CURVE_TO:
+        for x in Cubic(current_x, points[0], points[2], points[4]).extremes():
+          ux(x)
+        for y in Cubic(current_y, points[1], points[3], points[5]).extremes():
+          uy(y)
+    
+    for element in path:
+      dprint(f'element: {element}')
+      pe(element)
 
-      def pe(element):
-        nonlocal current_x, current_y
-        type, points = element
-        if type == cairo.PATH_MOVE_TO:
-          m(*points)
-        elif type == cairo.PATH_LINE_TO:
-          u(*points)
-        elif type == cairo.PATH_CURVE_TO:
-          for x in Cubic(current_x, points[0], points[2], points[4]).extremes():
-            ux(x)
-          for y in Cubic(current_y, points[1], points[3], points[5]).extremes():
-            uy(y)
-      
-      ctx.move_to(0, 0)
-      PangoCairo.layout_path(ctx, layout)
-      for element in ctx.copy_path():
-        pe(element)
+    return tuple(Pango.SCALE * v for v in [x_min, y_min, x_max, y_max])
 
-      x_min *= Pango.SCALE * font.metrics.scale
-      x_max *= Pango.SCALE * font.metrics.scale
-      y_min *= Pango.SCALE * font.metrics.scale
-      y_max *= Pango.SCALE * font.metrics.scale
-
-      return (x_min, y_min, x_max, y_max)
-
-
-  def metrics(self, font_family: str, bold: bool = False, italic: bool = False):
+  
+  def measure(self, s: str, font_family: str, bold: bool = False, italic: bool = False):
     font_family = self.getFamily(font_family)
-    dprint(f"metrics for '{font_family}'{' bold' if bold else ''}{' italic' if italic else ''}")
     desc = Pango.FontDescription()
     desc.set_family(font_family)
     # Always render fonts at a large size - 256 points! - so we don't trigger low-resolution hinting.
@@ -347,56 +334,57 @@ class TextRenderer:
     with io.BytesIO() as result, cairo.SVGSurface(result, self.INITIAL_SIZE, self.INITIAL_SIZE) as surface:
       ctx = cairo.Context(surface)
       layout = PangoCairo.create_layout(ctx)
-      layout.set_text("Mlj")
+      pctx = layout.get_context()
+      pctx.set_font_map(self.font_map)
+      pctx.set_font_description(desc)
+
+      ctx.move_to(0, 0)
+      layout.set_text(s)
+      PangoCairo.layout_path(ctx, layout)
+      return self.measure_path(ctx.copy_path())
+
+
+  def metrics(self, font_family: str, bold: bool = False, italic: bool = False):
+    dprint(f"metrics for '{font_family}'{' bold' if bold else ''}{' italic' if italic else ''}")
+    font_family = self.getFamily(font_family)
+    desc = Pango.FontDescription()
+    desc.set_family(font_family)
+    # Always render fonts at a large size - 256 points! - so we don't trigger low-resolution hinting.
+    desc.set_size(self.INITIAL_SIZE)
+    desc.set_style(Pango.Style.ITALIC if italic else Pango.Style.NORMAL)
+    desc.set_weight(Pango.Weight.BOLD if bold else Pango.Weight.NORMAL)
+
+    with io.BytesIO() as result, cairo.SVGSurface(result, self.INITIAL_SIZE, self.INITIAL_SIZE) as surface:
+      ctx = cairo.Context(surface)
+      layout = PangoCairo.create_layout(ctx)
 
       pctx = layout.get_context()
       pctx.set_font_map(self.font_map)
       pctx.set_font_description(desc)
-      metrics = pctx.get_metrics()
 
-      current_y = 0
-      y_min = metrics.height
-      y_max = 0
-
-      def my(y):
-        nonlocal current_y
-        dprint(f'[{current_y=}], {y=}', end='')
-        current_y = y
-        dprint(f' -> [{current_y=}]')
-
-      def uy(y):
-        nonlocal current_y, y_min, y_max
-        dprint(f'[{y_min=},{y_max=},{current_y=}], {y=}', end='')
-        y_min = min(y_min, current_y, y)
-        y_max = max(y_max, current_y, y)
-        current_y = y
-        dprint(f' -> [{y_min=},{y_max=},{current_y=}]')
-
-      def pe(element):
-        type, points = element
-        if type == cairo.PATH_MOVE_TO:
-          my(points[1])
-        elif type == cairo.PATH_LINE_TO:
-          uy(points[1])
-        elif type == cairo.PATH_CURVE_TO:
-          uy(points[5])
-      
       ctx.move_to(0, 0)
+      layout.set_text("lj")
       PangoCairo.layout_path(ctx, layout)
-      for element in ctx.copy_path():
-        pe(element)
+      (_, text_y_min, _, text_y_max) = self.measure_path(ctx.copy_path())
 
-      y_min *= Pango.SCALE
-      y_max *= Pango.SCALE
+      ctx.new_path()
+      ctx.move_to(0, 0)
+      layout.set_text("M")
+      PangoCairo.layout_path(ctx, layout)
+      (_, cap_y_min, _, cap_y_max) = self.measure_path(ctx.copy_path())
+
+      metrics = pctx.get_metrics()
 
       baseline = metrics.height - metrics.descent
 
-      text_up = baseline - y_min
-      text_down = y_max - baseline
-      above_text = y_min
-      dprint(f'\'Mlj\' {y_min=},{y_max=} => {text_up=},{text_down=},{above_text=}')
+      text_up = baseline - text_y_min
+      text_down = text_y_max - baseline
+      cap_height = baseline - cap_y_min
+      above_text = text_y_min
+      dprint(f'\'lj\' {text_y_min=},{text_y_max=} => {text_up=},{text_down=},{above_text=}')
+      dprint(f'\'M\' {cap_y_min=},{cap_y_max=} => {cap_height=}')
 
-      result = Metrics(metrics.height, text_up, text_down, above_text, metrics.ascent, metrics.descent)
+      result = Metrics(metrics.height, text_up, text_down, above_text, metrics.ascent, metrics.descent, cap_height)
       dprint(f'metrics = {result}')
       return result
 
@@ -409,7 +397,7 @@ class TextRenderer:
     font_family = self.getFamily(f.family)
     dprint(f"textWidth for '{font_family}'")
 
-    x_min, y_min, x_max, y_max = self.measure(s, f)
+    x_min, y_min, x_max, y_max = [v * f.scale for v in self.measure(s, f.family, f.bold, f.italic)]
     dprint(f'measured: ({x_min},{y_min},{x_max-x_min},{y_max-y_min})')
 
     desc = Pango.FontDescription()
@@ -433,14 +421,14 @@ class TextRenderer:
       (log, ink) = layout.get_extents()
       dprint(f"extents: ({log.x}, {log.y}, {log.width}, {log.height}), ({ink.x}, {ink.y}, {ink.width}, {ink.height})")
 
-      return f.metrics.scale * ink.width
+      return f.scale * ink.width
 
 
   def textPath(self, s: str,  w: float, f: Font, alignment: Alignment = Alignment.CENTERED):
     font_family = self.getFamily(f.family)
     dprint(f"textPath for '{s}' in '{font_family}'")
 
-    x_min, y_min, x_max, y_max = self.measure(s, f)
+    x_min, y_min, x_max, y_max = [v * f.scale for v in self.measure(s, f.family, f.bold, f.italic)]
     dprint(f'measured: ({x_min},{y_min},{x_max-x_min},{y_max-y_min})')
 
     x_scale = 0
@@ -454,7 +442,7 @@ class TextRenderer:
     desc.set_style(Pango.Style.ITALIC if f.italic else Pango.Style.NORMAL)
     desc.set_weight(Pango.Weight.BOLD if f.bold else Pango.Weight.NORMAL)
 
-    with io.BytesIO() as result, cairo.SVGSurface(result, w / f.metrics.scale, f.metrics.height / f.metrics.scale) as surface:
+    with io.BytesIO() as result, cairo.SVGSurface(result, w / f.scale, f.height / f.scale) as surface:
       ctx = cairo.Context(surface)
       layout = PangoCairo.create_layout(ctx)
       layout.set_text(s)
@@ -465,7 +453,7 @@ class TextRenderer:
       metrics = pctx.get_metrics()
       dprint(f'metrics: height={metrics.height}, ascent={metrics.ascent}, descent={metrics.descent}')
       dprint(f'font\'s metrics: height={f.metrics.height}, ascent={f.metrics.ascent}, descent={f.metrics.descent}')
-      dprint(f'scaled metrics: height={f.metrics.scale * metrics.height}, ascent={f.metrics.scale * metrics.ascent}, descent={f.metrics.scale * metrics.descent}')
+      dprint(f'scaled metrics: height={f.scale * metrics.height}, ascent={f.scale * metrics.ascent}, descent={f.scale * metrics.descent}')
       font = self.font_map.load_font(pctx, desc)
       if font:
         face = font.get_face()
@@ -477,7 +465,7 @@ class TextRenderer:
       (log, ink) = layout.get_extents()
       dprint(f"extents: ({log.x}, {log.y}, {log.width}, {log.height}), ({ink.x}, {ink.y}, {ink.width}, {ink.height})")
 
-      y_scale = f.metrics.scale
+      y_scale = f.scale
       dprint(f'{y_scale=}; scaled ink height = {y_scale * ink.height}')
       x_scale = y_scale
       scaled_width = x_scale * ink.width

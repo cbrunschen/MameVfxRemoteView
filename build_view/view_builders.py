@@ -817,13 +817,15 @@ class FullViewBuilder(ViewBuilder):
         self.onCondition('hasSeq')
         if self.isTrue():
           # VFX-SD
-          font = self.text_renderer.getFont('Panel').scaledToAscent(27)
-          self.addLabel(13, y_bottom, 67, "VFX-SD", font, alignment=Alignment.STRETCH)
+          b = Drawings.VFXSD.bounds
+          font = self.text_renderer.getFont('Panel').scaledToCapHeight(b.h)
+          self.addLabel(13, y_bottom, b.w, "VFX-SD", font, alignment=Alignment.STRETCH)
 
         if self.isFalse():
           # VFX
-          font = self.text_renderer.getFont('Panel').scaledToAscent(43)
-          self.addLabel(13, y_bottom, 92, "VFX", font, alignment=Alignment.STRETCH)
+          b = Drawings.VFX.bounds
+          font = self.text_renderer.getFont('Panel').scaledToCapHeight(b.h)
+          self.addLabel(13, y_bottom, b.w, "VFX", font, alignment=Alignment.STRETCH)
 
         self.endCondition()
       self.endCondition()
