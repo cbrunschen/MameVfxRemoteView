@@ -761,6 +761,7 @@ class FullViewBuilder(ViewBuilder):
     self.endCondition();
 
     y_bottom = 121.5 - 17
+    eb = Drawings.EnsoniqLogo.bounds
 
     if self.real_logos:
 
@@ -787,12 +788,12 @@ class FullViewBuilder(ViewBuilder):
         self.endCondition()
       self.endCondition()
 
-      self.addShowDrawing(760, y_bottom - 10.56, 72, 10.56, Drawings.EnsoniqLogo)
+      self.addShowDrawing(760, y_bottom - eb.h, eb.w, eb.h, Drawings.EnsoniqLogo)
 
     else:
-      font = self.text_renderer.getFont('Panel').scaledToTextHeight(12)
-      self.addShowDrawing(760, 90, 72, 13, Drawings.FakeEnsoniqLogo)
-      self.add(Label(762, 90.5 + font.baseline - font.above_text, 68, "ensoniq", font=font, alignment=Alignment.STRETCH))
+      font = self.text_renderer.getFont('Panel').scaledToTextHeight(eb.h - 1)
+      self.addShowDrawing(760, y_bottom - eb.h, eb.w, eb.h, Drawings.FakeEnsoniqLogo)
+      self.add(Label(762, y_bottom - eb.h + font.baseline - font.above_text + 0.5, eb.w - 2, "ensoniq", font=font, alignment=Alignment.STRETCH))
 
       self.onCondition('isSd1')
       if self.isTrue():
