@@ -168,7 +168,7 @@ class MameLayoutVisitor(ViewVisitor):
         self.layout_group(name='vfd_cell', bounds=Rect(0, 0, 342, 572), contents=[
           self.layout_element(ref='segments', name='~input~', bounds=Rect(50, 69, 214, 311)),
           self.layout_element(ref='dot', name='~input~', bounds=Rect(253, 337, 42, 42)),
-          self.layout_element(ref='underline', name='~input~', bounds=Rect(43, 411, 183, 25)),
+          self.layout_element(ref='underline', name='~input~', bounds=Rect(43, 444, 183, 25)),
         ]),
       ])
       
@@ -513,6 +513,22 @@ class MameLayoutVisitor(ViewVisitor):
 
     self.lights.append(
       self.layout_element(ref=f'light_{light.number}', name='lights', bounds=light.bounds)
+    )
+
+  def visitMedia(self, media: 'Media'):
+    bit = 1 << media.number
+    maskval = f'0x{bit:04x}'
+
+    name = f'media_{to_id(media.name)}'
+    if name not in self.decoration_definitions:
+      contents = list()
+      if media.absent:
+        contents.append(self.layout_svg_image(str(media.absent.toSvgElement(media.colors)), state='0', statemask=maskval))
+      contents.append(self.layout_svg_image(str(media.present.toSvgElement(media.colors)), state=maskval, statemask=maskval))
+      self.decoration_definitions[name] = self.layout_element(name=name, contents=contents)
+
+    self.decorations.append(
+      self.layout_element(ref=name, name='media', bounds=media.bounds)
     )
 
   def visitLabel(self, label: 'Label'):

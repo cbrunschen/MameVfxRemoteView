@@ -120,6 +120,13 @@ Color('symbol', 'white')
 Color('plugin_warning', '#bb2c2c')
 Color('plugin_warning_background', '#b2b2b2')
 
+Color('floppy_body', '#024d96')
+Color('floppy_label', '#bbbbbb')
+
+Color('cartridge_body', 'black_plastic')
+Color('cartridge_cavity', '#020202')
+Color('cartridge_label', '#bbbbbb')
+
 
 def get_color(s):
   if s in colors_by_name:

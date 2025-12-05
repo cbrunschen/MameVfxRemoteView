@@ -742,10 +742,19 @@ class FullViewBuilder(ViewBuilder):
 
     self.addButtonArea(Vector(505, 0))
 
-    cart_outside = Rect(720, 22, 56, 27)
-    cart_inside = cart_outside.inset(1.5, 1.5)
+    cart_outside = Rect(720, 22, 57, 28)
+    cart_inside = cart_outside.inset(2, 2)
     cart = self.add(Rectangle(cart_outside, 'body_down'))
-    self.add(Rectangle(cart_inside, 'body_up'))
+    self.add(Media(
+      cart_inside, 'cartridge', 0, 
+      present=Drawings.Cartridge, 
+      absent=Drawings.CartridgeSlotCover, 
+      colors = {
+        'slot' : 'body_down',
+        'body' : 'cartridge_body',
+        'label': 'cartridge_label',
+        'cover': 'body_up',
+      }))
     self.addLabelAbove(cart_outside.x, cart, cart_outside.w, "Cartridge", font=self.button_font)
 
     self.addBackPanel(Vector(0, -32))
@@ -757,7 +766,7 @@ class FullViewBuilder(ViewBuilder):
     if self.isTrue():
       self.addLabel(13, 7 + font.baseline, 88, "MUSIC PRODUCTION SYNTHESIZER", font, alignment=Alignment.STRETCH)
     if self.isFalse():
-      self.addLabel(13, 7 + font.baseline, 88, "DYNAMIC COMPONENT SYNTHESIZER",  font, alignment=Alignment.STRETCH)
+      self.addLabel(13, 7 + font.baseline, 88, "DYNAMIC COMPONENT SYNTHESIZER", font, alignment=Alignment.STRETCH)
     self.endCondition();
 
     y_bottom = 121.5 - 17
@@ -844,7 +853,7 @@ class FullViewBuilder(ViewBuilder):
       'bottom': 'body_up_shallow', 
     })
 
-    self.addShowDrawing(-127, 129.5, 118, 162, Drawings.WheelAndFloppyArea, colors = {
+    self.addShowDrawing(-127, 129.5, 118, 162, Drawings.WheelAndFloppyDriveArea, colors = {
       'left': 'body_down', 
       'right': 'body_up', 
       'back': 'body_down', 
@@ -852,15 +861,22 @@ class FullViewBuilder(ViewBuilder):
 
     self.onCondition('hasSeq')
     if self.isTrue():
-      show_floppy = self.addShowDrawing(-119, 129.5, 102, 13, Drawings.Floppy, colors = {
+      floppy_colors = {
         'top': 'black_plastic', 
         'front': 'black_plastic_shade', 
         'slot_outer': 'black_plastic_dark', 
         'slot_inner': 'black_plastic_darker', 
-        'button': 'black_plastic_dark', 
+        'disk': 'floppy_body',
+        'label': 'floppy_label',
+        'button': 'black_plastic', 
         'led': 'light_off', 
-      })
-      floppy_factor = cast(ShowDrawing, show_floppy).bounds.h / Drawings.Floppy.bounds.h 
+      }
+      floppy_media = self.add(Media(
+        Rect(-119, 129.5, 102, 13), 'floppy', 1, 
+        Drawings.FloppyDriveWithDisk, 
+        Drawings.FloppyDriveEmpty,
+        colors = floppy_colors))
+      floppy_factor = cast(Media, floppy_media).bounds.h / Drawings.FloppyDriveWithDisk.bounds.h 
       self.addLight(-56, 129.5 + floppy_factor * 22.5, 5, floppy_factor * 2.0, 16)
     self.endCondition()
 

@@ -118,6 +118,46 @@ class HTMLJSVisitor(ViewVisitor):
     bounds = light.bounds + self.offset
     self.append(f'this.addLight({bounds.coords()}, {light.number});')
 
+  def visitMedia(self, media: 'Media'):
+    viewBox = media.present.bounds.viewBox()
+    bounds = media.bounds + self.offset
+    self.append(f'this.addMedia({bounds.coords()}, "{viewBox}", {media.number}, [')
+    self.iin()
+    element = media.present.toSvgElement(media.colors)
+    for child in element.children:
+      if isinstance(child, Element):
+        self.append('{')
+        self.iin()
+        self.append(f'tag: "{child.tag}",')
+        self.append('attrs: {')
+        self.iin()
+        for attr, value in child.attrs.items():
+          self.append(f'"{attr}": `{value}`,')
+        self.iout()
+        self.append('}')
+        self.iout()
+        self.append('},')
+    if media.absent:
+      self.iout()
+      self.append("], [")
+      self.iin()
+      element = media.absent.toSvgElement(media.colors)
+      for child in element.children:
+        if isinstance(child, Element):
+          self.append('{')
+          self.iin()
+          self.append(f'tag: "{child.tag}",')
+          self.append('attrs: {')
+          self.iin()
+          for attr, value in child.attrs.items():
+            self.append(f'"{attr}": `{value}`,')
+        self.iout()
+        self.append('}')
+        self.iout()
+        self.append('},')
+    self.iout()
+    self.append(']);')
+
   def visitLabel(self, label: 'Label'):
     color = 'this.accentColor' if label.color == 'accent' else f'Colors.{snake_to_upper_snake_case(label.color)}' if label.color else 'null'
     bounds = label.bounds + self.offset
@@ -176,18 +216,34 @@ class HTMLJSVisitor(ViewVisitor):
     drawing = show.drawing
     bounds = show.bounds.offset(self.offset)
     self.append(f'this.addDrawing({bounds.coords()},')
-    self.append(f'  "{drawing.bounds.x} {drawing.bounds.y} {drawing.bounds.w} {drawing.bounds.h}",')
-    self.append(f'  [')
+    self.iin()
+    self.append(f'"{drawing.bounds.viewBox()}",')
+    self.append(f'[')
+    self.iin()
     element = drawing.toSvgElement(show.colors)
     for child in element.children:
       if isinstance(child, Element):
-        self.append('    {')
-        self.append(f'      tag: "{child.tag}",')
+        self.append('{')
+        self.iin()
+        self.append(f'tag: "{child.tag}",')
+        self.append('attrs: {')
+        self.iin()
         for attr, value in child.attrs.items():
-          self.append(f'      "{attr}": `{value}`,')
-        self.append('    },')
-
-    self.append('  ]);')
+          if value.find('\n') >= 0:
+            self.append(f'"{attr}": `')
+            self.iin()
+            self.append(value)
+            self.iout()
+            self.append('`,')
+          else:
+            self.append(f'"{attr}": "{value}",')
+        self.iout()
+        self.append('}')
+        self.iout()
+        self.append('},')
+    self.iout()
+    self.append(']);')
+    self.iout()
   
   def visitMultiPageChevrons(self, chevrons: MultiPageChevrons):
     # For now at least, generate font metrics ourselves ...

@@ -4,7 +4,8 @@ import cairo
 import gi
 import io
 import os
-from math import sqrt
+import re
+from math import sqrt, modf
 from dataclasses import dataclass, field
 from util import Alignment, dprint, eprint, set_debug
 
@@ -13,6 +14,54 @@ from gi.repository import Pango # pyright: ignore[reportMissingModuleSource]
 
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import PangoCairo # pyright: ignore[reportMissingModuleSource]
+
+
+class Quadratic:
+  def __init__(self, v0: float, v1: float, v2: float):
+    self.v0 = v0
+    self.v1 = v1
+    self.v2 = v2
+
+    # pseudo-derivative bernstein coefficients
+    self.d0 = v1 - v0
+    self.d1 = v2 - v1
+
+    # pseudo-derivative in canonical polynomial form
+    self.da0 = self.d0
+    self.da1 = -self.d0 + self.d1
+  
+  def at(self, t):
+    if t <= 0.0:
+      return self.v0
+    elif 1.0 <= t:
+      return self.v2
+    else:
+      t1 = 1.0 - t
+      a0 = t1 * self.v0 + t * self.v1
+      a1 = t1 * self.v1 + t * self.v2
+      return t1 * a0 + t * a1
+  
+  def extremes(self):
+    v_min = min(self.v0, self.v2)
+    v_max = max(self.v0, self.v2)
+
+    def u(t):
+      nonlocal v_min, v_max
+      if 0 < t and t < 1:
+        dprint(f"extreme at t={t}")
+        vt = self.at(t)
+        v_min = min(v_min, vt)
+        v_max = max(v_max, vt)
+
+    # solve da0 + t da1 == 0
+    a = self.da1
+    b = self.da0
+
+    if a != 0:
+      t = -b / a
+      u(t)
+
+    return (v_min, v_max)
 
 
 class Cubic:
@@ -40,7 +89,7 @@ class Cubic:
     else:
       t1 = 1.0 - t
       a0 = t1 * self.v0 + t * self.v1
-      a1 = t1 * self.v1 + t * self.v3
+      a1 = t1 * self.v1 + t * self.v2
       a2 = t1 * self.v2 + t * self.v3
       b0 = t1 * a0 + t * a1
       b1 = t1 * a1 + t * a2
@@ -89,6 +138,118 @@ class Cubic:
     return (v_min, v_max)
 
 
+
+class SVGPathParser:
+  """Bezier paths only (no arcs)"""
+
+  MOVE_TO = 'M'
+  R_MOVE_TO = 'm'
+  LINE_TO = 'L'
+  R_LINE_TO = 'l'
+  CURVE_TO = 'C'
+  R_CURVE_TO = 'c'
+  QUAD_TO = 'Q'
+  R_QUAD_TO = 'q'
+  CLOSE = 'Z'
+  R_CLOSE = 'z'
+
+  CMDS = {
+    MOVE_TO,
+    LINE_TO,
+    R_LINE_TO,
+    CURVE_TO,
+    R_CURVE_TO,
+    QUAD_TO,
+    R_QUAD_TO,
+    CLOSE,
+    R_CLOSE,
+  }
+
+  match_cmd = re.compile(r'\s*([MmLlCcQqZz])')
+  match_num = re.compile(r'\s*,?\s*([+-]?\d*\.?\d*([eE][+-]?\d+)?)')
+
+  @staticmethod
+  def parts(s):
+    while len(s) > 0:
+      if match := SVGPathParser.match_cmd.match(s):
+        s = s[match.end():]
+        dprint(f'cmd {match}, remaining={s}')
+        yield match.group(1) 
+      if match := SVGPathParser.match_num.match(s):
+        if len(match.group()) > 0:
+          s = s[match.end():]
+          dprint(f'num {match} with groups {match.groups()}, remaining={s}')
+          v = float(match.group(1))
+          fractional, integral = modf(v)
+          if fractional == 0.0:
+            dprint(f'- {v} represents an integer, {fractional=}')
+            yield int(integral)
+          else:
+            dprint(f'- {v} is a float, {fractional=}')
+            yield v
+
+  @staticmethod  
+  def want(cmd):
+    relative = cmd.islower()
+    cmd = cmd.lower()
+    if cmd == 'm' or cmd == 'l':
+      return (1, cmd, relative)
+    elif cmd == 'q':
+      return (2, cmd, relative)
+    elif cmd == 'c':
+      return (3, cmd, relative)
+    elif cmd == 'z':
+      return (0, cmd, relative)
+    else:
+      return (-1, None, False)
+  
+
+  @staticmethod
+  def parse(s):
+    s = s.strip()
+    parts = list(SVGPathParser.parts(s))
+
+    cmd = parts[0]
+    n_points, cmd, relative = SVGPathParser.want(cmd)
+    parts = parts[1:]
+    
+    while cmd is not None and len(parts) > 0:
+      if parts[0] in SVGPathParser.CMDS:
+        cmd = parts[0]
+        n_points, cmd, relative = SVGPathParser.want(cmd)
+        parts = parts[1:]
+        
+      if n_points < 0:
+        raise ValueError
+
+      points = list()
+      for _ in range(n_points):
+        if isinstance(parts[0], (int, float)) and isinstance(parts[1], (int, float)):
+          points.append((parts[0], parts[1]))
+          parts = parts[2:]
+        else:
+          raise ValueError
+
+      if cmd == 'm':
+        print(f'Move {relative=} {points}')
+        # the next command after a move is a line.
+        cmd = 'l'
+      elif cmd == 'l':
+        print(f'Line {relative=} {points}')
+      elif cmd == 'q':
+        print(f'Quad {relative=} {points}')
+      elif cmd == 'c':
+        print(f'Cubic {relative=} {points}')
+      elif cmd == 'z':
+        print(f'Close {relative=} {points}')
+      else:
+        raise ValueError
+
+
+
+
+
+
 @dataclass
 class Metrics:
   height: float
@@ -98,7 +259,10 @@ class Metrics:
   ascent: float
   descent: float
   cap_height: float
-  scale: float = 1.0
+  scale: float = field(default=1.0, kw_only=True)
+
+  def __post_init__(self):
+    dprint(f'Created: {str(self)}')
 
   @property
   def text_height(self):
@@ -124,7 +288,7 @@ class Metrics:
       self.ascent * scale, 
       self.descent * scale,
       self.cap_height * scale,
-      self.scale * scale)
+      scale = self.scale * scale)
     
   def __imul__(self, scale):
     self.height     *= scale
@@ -135,6 +299,7 @@ class Metrics:
     self.descent    *= scale
     self.cap_height *= scale
     self.scale      *= scale
+    dprint(f'Multiplied: {str(self)}')
     return self
     
   def __div__(self, scale):
@@ -146,7 +311,7 @@ class Metrics:
       self.ascent / scale, 
       self.descent / scale,
       self.cap_height / scale,
-      self.scale / scale)
+      scale = self.scale / scale)
 
   def __idiv__(self, scale):
     self.height     /= scale
@@ -157,6 +322,7 @@ class Metrics:
     self.descent    /= scale
     self.cap_height /= scale
     self.scale      /= scale
+    dprint(f'Divided: {str(self)}')
     return self
   
   def scaleFor(self, get, target: float):
@@ -195,6 +361,9 @@ class Font:
   metrics: Metrics
   bold: bool = field(kw_only=True, default=False)
   italic: bool = field(kw_only=True, default=False)
+
+  def __post_init__(self):
+    dprint(f'Created: {str(self)}')
 
   @property
   def scale(self):
@@ -578,7 +747,6 @@ def sample():
   print('</svg>')
 
 def metrics():
-  set_debug(True)
   tr = TextRenderer();
   metrics = tr.metrics('Panel')
   want_text_height = 3.6  
@@ -589,5 +757,9 @@ def metrics():
   print(f'height={height}, ascent={ascent}, descent={descent}')
   print(f'text_height = {ascent + descent}')
 
+def test_parse():
+  SVGPathParser.parse(" M 100, 343.1 400 191 q 1e4 0.3e2 -1.0 -5e-5 z ")
+
 if __name__ == "__main__":
-  sample()
+  set_debug(True)
+  test_parse()

@@ -38,6 +38,9 @@ class ViewVisitor:
   def visitLight(self, light: 'Light'):
     pass
 
+  def visitMedia(self, media: 'Media'):
+    pass
+
   def visitLabel(self, label: 'Label'):
     pass
 

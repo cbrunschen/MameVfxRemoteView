@@ -354,7 +354,7 @@ segment_paths_led14seg_order = [
   flip_path(segment_paths_fip80b5r_order[i]) for i in led14seg_from_fip80b5r_indexes
 ]
 
-if __name__ == '__main__':
+def sample():
   for idx, path in enumerate(segment_paths_led14seg_order):
     points = parse_path(path)
     first = ' '.join(map(str, points[0]))
@@ -374,3 +374,7 @@ if __name__ == '__main__':
           </svg>
         ]]></data></image>
     """).format(idx=idx, mask=mask, path=path))
+
+
+if __name__ == '__main__':
+  sample()

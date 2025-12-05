@@ -28,7 +28,7 @@ class SVGPathElement:
     else:
       return overrideSpecific
     
-  def toSvgElement(self, r:float|None = None, fill:str|None = None, stroke:str|None = None, stroke_width:str|None = None, color:str|None = None) -> Element:
+  def toSvgElement(self, r:float|None = None, fill:str|None = None, fill_rule:str|None = None, stroke:str|None = None, stroke_width:str|None = None, color:str|None = None) -> Element:
    raise NotImplementedError()
 
 
@@ -40,7 +40,7 @@ class SVGRect(SVGPathElement):
   stroke: str|bool|None = None
   stroke_width: str|None = None
   
-  def toSvgElement(self, r:float|None=None, fill:str|None=None, stroke:str|None=None, stroke_width:str|None=None, color:str|None=None):
+  def toSvgElement(self, r:float|None=None, fill:str|None=None, fill_rule:str|None = None, stroke:str|None=None, stroke_width:str|None=None, color:str|None=None):
     rr = r if r is not None else self.r
     rx = f"{rr:.5g}"
     return Element('rect', clean({
@@ -62,7 +62,7 @@ class SVGCircle(SVGPathElement):
   stroke: str|bool|None = None
   stroke_width: str|None = None
   
-  def toSvgElement(self, r:float|None=None, fill:str|None=None, stroke:str|None=None, stroke_width:str|None=None, color:str|None=None):
+  def toSvgElement(self, r:float|None=None, fill:str|None=None, fill_rule:str|None = None, stroke:str|None=None, stroke_width:str|None=None, color:str|None=None):
     rr = r if r is not None else self.r
     rx = f"{rr:.5g}"
     return Element('circle', clean({
@@ -79,6 +79,7 @@ class SVGCircle(SVGPathElement):
 class SVGPath(SVGPathElement):
   data: str                   # the SVG path string, the 'd' attribute of an SVG path
   fill: bool|str = True
+  fill_rule: str|None = None
   stroke: bool|str = False
   stroke_width: str|None = None
 
@@ -88,11 +89,14 @@ class SVGPath(SVGPathElement):
     if isinstance(val, str):
       l.append(f'{attr}="{val}"')
   
-  def toSvgElement(self, r: float|None = None, fill: str|None = None, stroke: str|None = None,
-                   stroke_width: str|None = None, color: str|None = None):
+  def toSvgElement(self, r: float|None = None, 
+                   fill: str|None = None, fill_rule: str|None = None, 
+                   stroke: str|None = None, stroke_width: str|None = None, 
+                   color: str|None = None):
     return Element('path', clean({
       'd': self.data,
       'fill': self.overrideColor(self.fill, fill, color),
+      'fill-rule': fill_rule if fill_rule is not None else self.fill_rule,
       'stroke': self.overrideColor(self.stroke, stroke, color),
       'stroke-width': stroke_width if stroke_width is not None else self.stroke_width
     }), [])

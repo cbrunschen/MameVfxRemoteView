@@ -49,8 +49,18 @@ charWidth = 342;
 charHeight = 572;
 segmentScale = 0.1;
 
-function createElement(tag) {
-  return document.createElementNS("http://www.w3.org/2000/svg", tag);
+
+function createElement(tag, attrs = null) {
+  let el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  if (attrs != null)
+    for (const [a, v] of Object.entries(attrs)) {
+      if ((typeof v == 'boolean') && v) {
+        el.setAttribute(a, a);
+      } else if (v != null) {
+        el.setAttribute(a, v);
+      }
+    }
+  return el;
 }
 
 function showElement(e) {
@@ -90,12 +100,11 @@ class Display {
     this.height = charHeight * rows;
     this.blinkPhase = true;
 
-    var templateCell = createElement("g");
-    templateCell.setAttribute('transform', 'scale(' + segmentScale + ',' + segmentScale + ')');
+    var templateCell = createElement("g", {
+      transform: `scale(${segmentScale}, ${segmentScale})`
+    });
     for (var i = 0; i < segmentPaths.length; i++) {
-      var segmentPath = createElement("path");
-      segmentPath.setAttribute('d', segmentPaths[i]);
-      templateCell.appendChild(segmentPath);
+      templateCell.appendChild(createElement("path", {d:segmentPaths[i]}));
     }
 
     for (var row = 0; row < 2; row++) {
@@ -373,17 +382,13 @@ class Rect {
     return new Rect(this.x+dx, this.y+dy, this.w, this.h);
   }
 
-  toPath(r) {
-    var rect = createElement("rect");
-    rect.setAttribute("x", this.x);
-    rect.setAttribute("y", this.y);
-    rect.setAttribute("width", this.w);
-    rect.setAttribute("height", this.h);
-    if (r != null) {
-      rect.setAttribute("rx", r);
-      rect.setAttribute("ry", r);
-    }
-    return rect;
+  toPath(attrs={}) {
+    return createElement("rect", Object.assign({
+      x: this.x,
+      y: this.y,
+      width: this.w,
+      height: this.h,
+    }, attrs));
   }
 
   getX(d) {
@@ -416,19 +421,20 @@ class PatchSelectButton {
 
     var rect = this.rect.inset(0.25, 0.25);
     var translation = "translate(" + x + "," + y + ")";
-    this.halo = rect.toPath(1.25);
-    this.halo.setAttribute("stroke", Colors.HALO);
-    this.halo.setAttribute("stroke-width", "5");
-    this.halo.setAttribute("fill", "none");
+    this.halo = rect.toPath({
+      rx:'1.25',
+      stroke: Colors.HALO,
+      'stroke-width': "5",
+      fill: 'none'
+    });
     hideElement(this.halo);
 
     rect = rect.offset(-rect.x, -rect.y)
-    this.outline = rect.toPath(0.0);
-    this.outline.setAttribute("fill", Colors.BUTTON_LIGHT);
-    this.outline.setAttribute("stroke", "none");
+    this.outline = rect.toPath({fill:Colors.BUTTON_LIGHT, stroke:'none'});
+    console.log(`PatchSelect outline:`);
+    console.log(this.outline);
 
-    this.group = createElement("g");
-    this.group.setAttribute("transform", translation);
+    this.group = createElement("g", {transform:translation});
     this.group.appendChild(this.outline);
 
     this.value = number;
@@ -484,19 +490,22 @@ class Button {
 
     var rect = this.rect.inset(0.25, 0.25);
     var translation = "translate(" + x + "," + y + ")";
-    this.halo = rect.toPath(1.25);
-    this.halo.setAttribute("stroke", Colors.HALO);
-    this.halo.setAttribute("stroke-width", "5");
-    this.halo.setAttribute("fill", "none");
+    this.halo = rect.toPath({
+      rx:1.25,
+      stroke: Colors.HALO,
+      'stroke-width': 5,
+      fill: 'none'
+    });
     hideElement(this.halo);
 
     rect = rect.offset(-rect.x, -rect.y)
-    this.outline = rect.toPath(1.25);
-    this.outline.setAttribute("fill", color);
-    this.outline.setAttribute("stroke", "none");
+    this.outline = rect.toPath({
+      rx:'1.25',
+      fill:color,
+      stroke:'none',
+    });
 
-    this.group = createElement("g");
-    this.group.setAttribute("transform", translation);
+    this.group = createElement("g", {transform:translation});
     this.group.appendChild(this.outline);
 
     this.value = number;
@@ -596,6 +605,30 @@ class Light {
   }
 }
 
+class Media {
+  constructor(x, y, w, h, number, present, absent=null) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.number = number;
+    this.present = present;
+    this.absent = absent;
+    this.setState(false);
+  }
+
+  setState(state) {
+    this.state = state;
+    if (state) {
+      if (this.absent) hideElement(this.absent);
+      showElement(this.present);
+    } else {
+      hideElement(this.present);
+      if (this.absent) showElement(this.absent);
+    }
+  }
+}
+
 class TouchPoint {
   constructor(x, y) {
     this.x = x;
@@ -634,11 +667,6 @@ class Key {
     this.velocity = 0;
     this.pressure = 0;
 
-    var translation = "translate(" + x + "," + y + ")";
-    this.element = createElement("path");
-    this.element.setAttribute("transform", translation);
-    this.element.setAttribute("class", "key");
-    this.element.setAttribute("d", path);
     if (this.black) {
       this.color = Colors.KEY_BLACK;
       this.color_velocity_min = Colors.KEY_BLACK_VELOCITY_MIN;
@@ -652,7 +680,13 @@ class Key {
       this.color_pressure_min = Colors.KEY_WHITE_PRESSURE_MIN;
       this.color_pressure_max = Colors.KEY_WHITE_PRESSURE_MAX;
     }
-    this.element.setAttribute("fill", this.color);
+    var translation = "translate(" + x + "," + y + ")";
+    this.element = createElement("path", {
+      transform: translation,
+      class: 'key',
+      d: path,
+      fill: this.color
+    });
 
     let that = this;
     this.element.addEventListener("touchstart", function(e) { that.touchstart(e); }, true);
@@ -1039,9 +1073,7 @@ class Slideable {
     this.rect = new Rect(x, y, w, h);
     var rect = this.rect.offset(-x, -y);
     var translation = "translate(" + x + "," + y + ")";
-    this.group = createElement("g");
-    this.group.setAttribute("transform", translation);
-    this.group.setAttribute("class", "slider");
+    this.group = createElement("g", {transform:translation, class:'slider'});
 
     this.populate(rect);
 
@@ -1301,11 +1333,12 @@ class Connector {
 
     this.patchSelectStatus = 0;
 
-    this.root = createElement("svg");
-    this.root.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    this.root.setAttribute("width", "800");
-    this.root.setAttribute("height", "600");
-    this.root.setAttribute("overflow", "scroll");
+    this.root = createElement("svg", {
+      preserveAspectRatio: "xMidYMid meet",
+      width: "800",
+      height: "600",
+      overflow: "scroll"
+    });
 
     this.startConnection();
   }
@@ -1438,22 +1471,19 @@ class Connector {
 
   makeLabelText(fontSize, bold = false, italic = false) {
     let factor = this.fontSizeFactors[bold ? (italic ? 'bold_italic' : 'bold') : (italic ? 'italic' : '')];
-    var labelText = createElement("text");
-    labelText.setAttribute('font-size', `${fontSize * factor}`);
-    labelText.setAttribute('font-family', 'Panel');
-    if (bold) {
-      labelText.setAttribute('font-weight', 'bold');
-    }
-    if (italic) {
-      labelText.setAttribute('font-style', 'italic');
-    }
+    var labelText = createElement("text", {
+      'font-size': `${fontSize * factor}`,
+      'font-family': 'Panel',
+      'font-weight': bold ? 'bold' : null,
+      'font-style': italic ? 'italic' : null
+    });
     return labelText;
   }
 
   fontSizeFactor(bold = false, italic = false) {
     let canvas = document.getElementById("measure");
 
-    let scale = 10000;
+    let scale = (1 << 10);
     let font = `${scale}px`;
     if (bold) font = `${font} bold`;
     if (italic) font = `${font} italic`;
@@ -1541,85 +1571,98 @@ class Connector {
   }
 
   addRectangle(x, y, w, h, color) {
-    let rectangle = createElement("rect");
-    rectangle.setAttribute("x", x);
-    rectangle.setAttribute("y", y);
-    rectangle.setAttribute("width", w);
-    rectangle.setAttribute("height", h);
-    rectangle.setAttribute("fill", color);
+    let rectangle = createElement("rect", {
+      x: x,
+      y: y,
+      width: w,
+      height: h,
+      fill: color
+    });
     this.decorationsContainer.appendChild(rectangle);
+    return rectangle;
   }
 
   addEllipse(x, y, w, h, color) {
-    let ellipse = createElement("ellipse");
-    ellipse.setAttribute("cx", x + w/2);
-    ellipse.setAttribute("cy", y + h/2);
-    ellipse.setAttribute("rx", w / 2);
-    ellipse.setAttribute("ry", h / 2);
-    ellipse.setAttribute("fill", color);
+    let ellipse = createElement("ellipse", {
+      cx: x + w/2,
+      cy: y + h/2,
+      rx: w/2,
+      ry: h/2,
+      fill: color
+    });
     this.decorationsContainer.appendChild(ellipse);
-  }
-
-  makeFilledPath(path, color) {
-    let element = createElement("path")
-    element.setAttribute("stroke", "none");
-    element.setAttribute("fill", color);
-    element.setAttribute("d", path);
-    return element;
-  }
-
-  addFilledPath(path, color) {
-    this.decorationsContainer.appendChild(this.makeFilledPath(path, color));
+    return ellipse;
   }
 
   addKeyboard(x, y, w, h, color) {
-    let rectangle = createElement("rect");
-    rectangle.setAttribute("x", x);
-    rectangle.setAttribute("y", y);
-    rectangle.setAttribute("width", w);
-    rectangle.setAttribute("height", h);
-    rectangle.setAttribute("rx", 2);
-    rectangle.setAttribute("fill", color);
+    let rectangle = createElement("rect", {
+      x: x,
+      y: y,
+      width: w,
+      height: h,
+      rx: 2,
+      fill: color
+    });
     this.decorationsContainer.appendChild(rectangle);
+    return rectangle;
   }
 
   addKey(x, y, w, h, keyNumber, black, path) {
     let key = new Key(x, y, keyNumber, black, path)
     this.mainContainer.appendChild(key.element);
+    return key;
   }
 
   addPath(x, y, d, fill=null, stroke=null, stroke_width=null) {
     const path = createElement("path");
     path.setAttribute("transform", `translate(${x} ${y})`);
-    path.setAttribute("y", y);
     path.setAttribute("d", d);
     if (fill != null) path.setAttribute("fill", fill);
     if (stroke != null) path.setAttribute("stroke", stroke);
     if (stroke_width != null) path.setAttribute("stroke-width", stroke_width);
     this.decorationsContainer.appendChild(path);
+    return path;
+  }
+
+  svgForDrawing(x, y, w, h, viewBox, contents) {
+    const svg = createElement("svg", {
+      x: x,
+      y: y,
+      width: w,
+      height: h,
+      viewBox: viewBox,
+      preserveAspectRatio: 'none',
+    });
+
+    for (var i = 0; i < contents.length; i++) {
+      svg.appendChild(createElement(contents[i].tag, contents[i].attrs));
+    }
+
+    return svg;
   }
 
   addDrawing(x, y, w, h, viewBox, contents) {
-    const svg = createElement("svg");
-    svg.setAttribute("x", x);
-    svg.setAttribute("y", y);
-    svg.setAttribute("width", w);
-    svg.setAttribute("height", h);
-    svg.setAttribute("viewBox", viewBox);
-    svg.setAttribute("preserveAspectRatio", "none");
+    this.decorationsContainer.appendChild(this.svgForDrawing(x, y, w, h, viewBox, contents));
+    return svg;
+  }
 
-    for (var i = 0; i < contents.length; i++) {
-      const part = contents[i];
-      const element = createElement(part.tag);
-      for (const [k, v] of Object.entries(part)) {
-        if (k != 'tag') {
-          element.setAttribute(k, v);
-        }
-      }
-
-      svg.appendChild(element);
+  addMedia(x, y, w, h, viewBox, number, present=[], absent=null) {
+    var media = new Media(
+      x, y, w, h, number, 
+      this.svgForDrawing(x, y, w, h, viewBox, present),
+      absent == null ? null : this.svgForDrawing(x, y, w, h, viewBox, absent));
+    
+    this.decorationsContainer.appendChild(media.present);
+    if (media.absent) {
+      this.decorationsContainer.appendChild(media.absent);
     }
-    this.decorationsContainer.appendChild(svg);
+
+    let old = this.media[number];
+    if (old !== undefined) {
+      media.setState(old.state);
+    }
+    this.media[number] = media;
+    return media;
   }
 
   selectView(view) {
@@ -1697,6 +1740,9 @@ class Connector {
     }
     if (typeof(this.lights) === 'undefined') {
       this.lights = new Array();
+    }
+    if (typeof(this.media) === 'undefined') {
+      this.media = new Array();
     }
     if (typeof(this.analogControls) === 'undefined') {
       this.analogControls = new Array();

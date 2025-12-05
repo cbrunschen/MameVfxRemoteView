@@ -74,6 +74,18 @@ class Light(ViewItem):
     visitor.visitLight(self)
 
 
+@dataclass
+class Media(ViewItem):
+  bounds: Rect
+  name: str
+  number: int
+  present: SVGDrawing
+  absent: SVGDrawing | None = None
+  colors: dict[str, str] = field(default_factory=dict, kw_only=True)
+
+  def accept(self, visitor):
+    visitor.visitMedia(self)
+
 
 @dataclass
 class Slider(ViewItem):
@@ -340,10 +352,10 @@ class MultiPageChevrons(ViewItem):
   def svgPath(w: float, h: float):
     ta = tan(radians(12))
     hh = h - 1.5
-    return dedent(f'''\
+    return dedent(f'''
       M 1 0.125 l {w - 1.125} {0} -{hh * ta} {hh} \
       M 0 1.125 l {w - 1.125 - ta} 0 -{hh * ta} {hh} \
-    ''')
+    ''').strip()
 
 
 @dataclass
@@ -357,46 +369,75 @@ class WhiteLineAround(ViewItem):
 
 # Here are some predefined drawings
 class Drawings:
-  StorageCutout = SVGDrawing(Rect(0, 0, 118, 96), "storage_cutout") \
-    .addItem("top", SVGPath("M 0 0 H 118 L 108 10 H 10 Z", fill=True)) \
-    .addItem("left", SVGPath("M 0 0 V 96 L 10 10 Z", fill=True)) \
-    .addItem("right", SVGPath("M 118 0 V 96 L 108 10 Z", fill=True)) \
-    .addItem("bottom", SVGPath("M 0 96 H 119 L 108 10 H 10 Z", fill=True)) \
+  StorageCutout = SVGDrawing(Rect(0, 0, 118, 96), "storage_cutout", {
+    'top': SVGPath("M 0 0 H 118 L 108 10 H 10 Z", fill=True),
+    'left': SVGPath("M 0 0 V 96 L 10 10 Z", fill=True),
+    'right': SVGPath("M 118 0 V 96 L 108 10 Z", fill=True),
+    'bottom': SVGPath("M 0 96 H 119 L 108 10 H 10 Z", fill=True),
+  })
 
-  WheelAndFloppyArea = SVGDrawing(Rect(0, 0, 118, 161), "wheel_and_floppy_area") \
-    .addItem('left', SVGRect(Rect(0, 0, 5, 161), 0, fill=True)) \
-    .addItem('right', SVGRect(Rect(113, 0, 5, 161), 0, fill=True)) \
-    .addItem('back', SVGPath("M 0 0 H 118 L 113 13 H 5 Z", fill=True)) \
+  WheelAndFloppyDriveArea = SVGDrawing(Rect(0, 0, 118, 161), "wheel_and_floppy_drive_area", {
+    'left': SVGRect(Rect(0, 0, 5, 161), 0, fill=True),
+    'right': SVGRect(Rect(113, 0, 5, 161), 0, fill=True),
+    'back': SVGPath("M 0 0 H 118 L 113 13 H 5 Z", fill=True),
+  })
 
-  Floppy = SVGDrawing(Rect(0, 0, 102, 36), "floppy") \
-    .addItem('top', SVGRect(Rect(0, 0, 102, 5), 0, fill=True)) \
-    .addItem('front', SVGRect(Rect(0, 5, 102, 31), 0, fill=True)) \
-    .addItem('slot_outer', SVGPath("M 3 6 H 74 V 3 H 99 V 20 H 74 V 16 H 3 Z", fill=True)) \
-    .addItem('slot_inner', SVGPath("M 5 9 H 97 V 13 H 5 Z", fill=True)) \
-    .addItem('led', SVGPath("M 63 22.5 H 68 V 24.5 H 63 Z", fill=True)) \
-    .addItem('button', SVGPath("M 74 21 h 25 v 26 H 74 Z", fill=True)) \
+  FloppyDriveEmpty = SVGDrawing(Rect(0, 0, 102, 36), "floppy_drive_empty", {
+    'top': SVGRect(Rect(0, 0, 102, 5), 0, fill=True),
+    'front': SVGRect(Rect(0, 5, 102, 31), 0, fill=True),
+    'slot_inner': SVGRect(Rect(4, 7, 94, 8), fill=True),
+    'slot_outer': SVGPath("M 3 6 H 74 V 3 H 99 V 20 H 74 V 16 H 3 Z M 5 9 H 97 V 16 H 74 V 13 H 5 Z", fill_rule="evenodd", fill=True),
+    'led': SVGPath("M 63 22.5 H 68 V 24.5 H 63 Z", fill=True),
+    'button': SVGRect(Rect(74, 21, 25, 2), fill=True),
+  })
 
-  PitchBend = SVGDrawing(Rect(0, 0, 4, 66), "pitch_bend") \
-    .addItem('all', SVGPath("M 0.25 0.25 H 3.5 L 2 30 Z M 0.25 65.75 H 3.5 L 2 36 Z",
-                            fill=False, stroke=True, stroke_width="0.5")) \
-    .addItem('dot', SVGCircle(Vector(2, 33), 1, fill=True))
+  FloppyDriveWithDisk = SVGDrawing(Rect(0, 0, 102, 36), "floppy_drive_with_disk", {
+    'top': SVGRect(Rect(0, 0, 102, 5), 0, fill=True),
+    'front': SVGRect(Rect(0, 5, 102, 31), 0, fill=True),
+    'slot_inner': SVGRect(Rect(4, 7, 94, 8), fill=True),
+    'disk': SVGRect(Rect(6, 12, 90, 3.5), fill=True),
+    'label': SVGRect(Rect(16, 12, 70, 3.5), fill=True),
+    'slot_outer': SVGPath("M 3 6 H 74 V 3 H 99 V 20 H 74 V 16 H 3 Z M 5 9 H 97 V 16 H 74 V 13 H 5 Z", fill_rule="evenodd", fill=True),
+    'led': SVGPath("M 63 22.5 H 68 V 24.5 H 63 Z", fill=True),
+    'button': SVGRect(Rect(74, 21, 25, 10), fill=True),
+  })
 
-  Modulation = SVGDrawing(Rect(0, 0, 4, 66), "modulation") \
-    .addItem('all', SVGPath("M 0.25 0.25 H 3 L 2 65.75 Z",
-                            fill=False, stroke=True, stroke_width="0.5"))
+  PitchBend = SVGDrawing(Rect(0, 0, 4, 66), "pitch_bend", {
+    'all': SVGPath("M 0.25 0.25 H 3.5 L 2 30 Z M 0.25 65.75 H 3.5 L 2 36 Z",
+                   fill=False, stroke=True, stroke_width="0.5"),
+    'dot': SVGCircle(Vector(2, 33), 1, fill=True),
+  })
 
-  TriangleUp = SVGDrawing(Rect(0, 0, 2, 1), "triangle_up") \
-    .addItem('all', SVGPath('M0 1H2L 1 0Z', fill="white"))
+  Modulation = SVGDrawing(Rect(0, 0, 4, 66), "modulation", {
+    'all': SVGPath("M 0.25 0.25 H 3 L 2 65.75 Z",
+                            fill=False, stroke=True, stroke_width="0.5")
+  })
+  
+  Cartridge = SVGDrawing(Rect(0, 0, 53, 24), "cartridge", {
+    'slot': SVGRect(Rect(0, 0, 53, 24), 0, fill=True),
+    'body': SVGPath("M1.5 14l1 10h48l1 -10 -1 -9h-48z"),
+    'label': SVGRect(Rect(10.5, 14, 32, 10), 0, fill=True),
+  })
+  
+  CartridgeSlotCover = SVGDrawing(Rect(0, 0, 53, 24), "cartridge_slot_cover", {
+    'cover': SVGRect(Rect(0, 0, 53, 24), 0, fill=True),
+  })
 
-  TriangleDown = SVGDrawing(Rect(0, 0, 2, 1), "triangle_down") \
-    .addItem('all', SVGPath('M0 0H2L1 1Z', fill="white"))
+  TriangleUp = SVGDrawing(Rect(0, 0, 2, 1), "triangle_up", {
+    'all': SVGPath('M0 1H2L 1 0Z', fill="white"),
+  })
 
-  FakeEnsoniqLogo = SVGDrawing(Rect(0, 0, 72, 13), "fake_ensoniq") \
-    .addItem('all', SVGRect(Rect(0.5, 0.5, 71, 12), r=1, fill=False, stroke="white", stroke_width="1"))
+  TriangleDown = SVGDrawing(Rect(0, 0, 2, 1), "triangle_down", {
+    'all': SVGPath('M0 0H2L1 1Z', fill="white"),
+  })
 
-  EnsoniqLogo = SVGDrawing(Rect(0, 0, 72, 10.56), "ensoniq") \
-    .addItem('logo', SVGPath(dedent(\
-      '''\
+  FakeEnsoniqLogo = SVGDrawing(Rect(0, 0, 72, 13), "fake_ensoniq", {
+    'all': SVGRect(Rect(0.5, 0.5, 71, 12), r=1, fill=False, stroke="white", stroke_width="1"),
+  })
+
+  EnsoniqLogo = SVGDrawing(Rect(0, 0, 72, 10.56), "ensoniq", {
+    'logo': SVGPath(dedent(
+      '''
       M 1.7436129,0
       C 0.78686512,0 0,0.78686172 0,1.7436129
       V 8.8163871
@@ -561,12 +602,13 @@ class Drawings:
       c -0.080466,0 -0.1432054,-0.062531 -0.1432054,-0.1430308
       V 3.7821938
       c 0,-0.0805 0.06274,-0.1430307 0.1432054,-0.1430307
-      z\
-      '''), fill='white'))
+      z
+      ''').strip(), fill='white')
+  })
 
-  VFX = SVGDrawing(Rect(0, 0, 92, 32.993019), "vfx") \
-    .addItem('vfx', SVGPath(dedent(\
-      '''\
+  VFX = SVGDrawing(Rect(0, 0, 92, 32.993019), "vfx", {
+    'vfx': SVGPath(dedent(
+      '''
       M 0 0
       L 19.047933 32.992301
       L 34.43304 6.3458659
@@ -607,13 +649,14 @@ class Drawings:
       L 59.007251 32.992818
       L 71.913957 20.086629
       L 69.6712 17.843355
-      z\
-      '''), fill='white')) \
-    .addItem('fill', SVGPath('M 3.6629875,1.033192e-8 19.048062,26.647483 34.433135,1.033192e-8 Z', fill='vfx'))
+      z
+      ''').strip(), fill='white'),
+    'fill': SVGPath('M 3.6629875,1.033192e-8 19.048062,26.647483 34.433135,1.033192e-8 Z', fill='vfx'),
+  })
 
-  VFXSD = SVGDrawing(Rect(0, 0, 90.495209, 26.00021), "vfxsd") \
-    .addItem('vfx', SVGPath(dedent(\
-      '''\
+  VFXSD = SVGDrawing(Rect(0, 0, 90.495209, 26.00021), "vfxsd", {
+    'vfx': SVGPath(dedent(
+      '''
       M 0 0
       L 15.01097 25.999963
       L 27.135295 5.0007284
@@ -654,10 +697,10 @@ class Drawings:
       L 46.501038 26.00048
       L 56.671993 15.829525
       L 54.904659 14.061674
-      z\
-      '''), fill='white')) \
-    .addItem('sd', SVGPath(dedent(\
-      '''\
+      z
+      ''').strip(), fill='white'),
+    'sd': SVGPath(dedent(
+      '''
       M 73.4008 7.60444
       C 73.4008 8.69767 73.7491 9.53936 74.4457 10.1295
       C 75.1423 10.71 76.0566 11.0002 77.1885 11.0002
@@ -725,20 +768,21 @@ class Drawings:
       C 87.4002 9.59744 87.0277 9.72804 86.6504 9.79577
       C 86.2731 9.85384 85.828 9.88287 85.3153 9.88287
       L 82.9498 9.88287
-      Z\
-      '''), fill='white')) \
-    .addItem('fill', SVGPath(dedent(\
-      '''\
+      Z
+      ''').strip(), fill='white'),
+    'fill': SVGPath(dedent(
+      '''
       M 2.88665 3.57591e-06
       L 15.011 20.9998
       L 27.1353 3.57591e-06
       L 2.88665 3.57591e-06
-      Z\
-      '''), fill='vfx'))
+      Z
+      ''').strip(), fill='vfx')
+  })
 
-  SD1 = SVGDrawing(Rect(0, 0, 67.000099, 28.247702), "sd1") \
-    .addItem('sd1', SVGPath(dedent(\
-      '''\
+  SD1 = SVGDrawing(Rect(0, 0, 67.000099, 28.247702), "sd1", {
+    'sd1': SVGPath(dedent(
+      '''
       M 9.5094971 0
       C 6.7161371 -1.42109e-14 4.530091 0.70830413 2.951241 2.1244181
       C 1.396681 3.5156781 0.61960042 5.2047958 0.61960042 7.1923258
@@ -818,19 +862,20 @@ class Drawings:
       C 34.467593 25.303637 33.350042 25.378296 32.062642 25.378296
       L 26.123987 25.378296
       L 26.123987 2.8695923
-      z\
-      '''), fill='white')) \
-    .addItem('triangle', SVGPath(dedent(\
-      '''\
+      z
+      ''').strip(), fill='white'),
+    'triangle': SVGPath(dedent(
+      '''
       M 42.5394 0.87059
       L 51.0163 9.93793
       L 59.4932 0.87059
-      Z\
-      '''), fill='sd1'))
+      Z
+      ''').strip(), fill='sd1')
+  })
 
-  SD132 = SVGDrawing(Rect(0, 0, 67.000557, 37.14674), "sd132") \
-    .addItem('sd1', SVGPath(dedent(\
-      '''\
+  SD132 = SVGDrawing(Rect(0, 0, 67.000557, 37.14674), "sd132", {
+    'sd1': SVGPath(dedent(
+      '''
       M 9.5094971 0
       C 6.7161371 -1.42109e-14 4.530091 0.70830413 2.951241 2.1244181
       C 1.396681 3.5156781 0.61960042 5.2047958 0.61960042 7.1923258
@@ -910,10 +955,10 @@ class Drawings:
       C 34.467593 25.303637 33.350042 25.378296 32.062642 25.378296
       L 26.123987 25.378296
       L 26.123987 2.8695923
-      z\
-      '''), fill='white')) \
-    .addItem('accented', SVGPath(dedent(\
-      '''\
+      z
+      ''').strip(), fill='white'),
+    'accented': SVGPath(dedent(
+      '''
       M 42.539522 0.87074788
       L 51.016524 9.9378947
       L 59.493009 0.87074788
@@ -1142,5 +1187,6 @@ class Drawings:
       C 38.430504 32.571203 38.3638 32.351546 38.2757 32.167546
       C 38.1909 31.983546 38.087057 31.839847 37.963057 31.736047
       C 37.839057 31.632247 37.698495 31.580501 37.541895 31.580501
-      z\
-      '''), fill='sd1'))
+      z
+      ''').strip(), fill='sd1')
+  })

@@ -11,6 +11,7 @@ from mame_layout import *
 from js_html import *
 from colors import colors, colors_by_name
 import util
+import render
 
 def main():
   parser = ArgumentParser()
@@ -28,6 +29,7 @@ def main():
 
   args = parser.parse_args()
   util.DEBUG = args.debug
+  render.set_debug(args.debug)
 
   visitor = None
   if args.javascript:

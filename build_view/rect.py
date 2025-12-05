@@ -127,8 +127,11 @@ class Rect:
 
     return Rect(enclosing.x + dx, enclosing.y + dy, self.w * scale, self.h * scale)
 
-  def coords(self):
-    return f'{self.x:.5g}, {self.y:.5g}, {self.w:.5g}, {self.h:.5g}'
+  def coords(self, separator=', '):
+    return separator.join([f'{v:.5g}' for v in [self.x, self.y, self.w, self.h]])
 
   def __str__(self):
     return f'({self.x:.5g},{self.y:.5g},{self.w:.5g},{self.h:.5g})'
+  
+  def viewBox(self):
+    return self.coords(' ')
