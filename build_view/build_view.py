@@ -11,7 +11,7 @@ from mame_layout import *
 from js_html import *
 from colors import colors, colors_by_name
 import util
-import render
+import render_harfbuzz as render
 
 def main():
   parser = ArgumentParser()

@@ -11,7 +11,7 @@ from myxml import *
 from mysvg import *
 from colors import Color, get_color, color_name
 from vfd import segment_paths_led14seg_order
-from render import TextRenderer
+from render_harfbuzz import TextRenderer
 
 @dataclass
 class MameLayoutDestination:
@@ -570,8 +570,8 @@ class MameLayoutVisitor(ViewVisitor):
     if id not in self.text_definitions:
       if self.text_paths:
         w, h = label.bounds.w, label.bounds.h
-        tp = self.text_renderer.textPath(label.text, w, label.font, label.alignment)
-        svg = f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}">{str(SVGPath(tp, fill="white").toSvgElement()).rstrip()}</svg>'
+        sx, sy, tp = self.text_renderer.textPath(label.text, w, label.font, label.alignment)
+        svg = f'<svg width="{w}" height="{h}" viewBox="0 0 {w/sx} {h/sy}">{str(SVGPath(tp, fill="white").toSvgElement()).rstrip()}</svg>'
         lt = self.layout_element(
           name=f'text_{id}',
           contents=self.layout_svg_image(

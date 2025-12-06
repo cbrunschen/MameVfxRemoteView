@@ -6,7 +6,7 @@ from util import *
 from view import *
 from keys import *
 from typing import cast
-from render import TextRenderer, Metrics
+from render_harfbuzz import TextRenderer
 
 # The pitch-bend and modulation wheels are approxi  mately:
 # r = 40mm
@@ -407,8 +407,6 @@ class ViewBuilder:
 
     # When the keyboard has a sequencer:
     self.onCondition("hasSeq")
-
-    smallFontSize = self.small_font.text_height
 
     if self.isTrue():
       label = self.addLabel(15.8, 82 - 1.5 * self.button_font.text_height, 2 * 15.8, "Tracks", self.small_font, alignment=Alignment.CENTERED)

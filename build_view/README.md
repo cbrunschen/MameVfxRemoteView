@@ -28,7 +28,7 @@ The visitor that generates the JavaScript code for use in the enclosing the Mame
 
 A single file is generated that conditionally shows the correct panel, depending on which keyboard is in use.
 
-#### [`View.js`](View.js)
+#### [`ViewCode.js`](ViewCode.js)
 
 The JavaScript framework into which the specific panel layout code is inserted to generate the full JavaScript code.
 

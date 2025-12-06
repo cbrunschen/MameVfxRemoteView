@@ -4,7 +4,7 @@ from textwrap import indent, dedent, wrap
 from dataclasses import dataclass, field
 from colors import colors
 from view import *
-from render import TextRenderer
+from render_harfbuzz import TextRenderer
 
 @dataclass
 class HTMLJSView:
@@ -165,8 +165,8 @@ class HTMLJSVisitor(ViewVisitor):
       if color == 'null':
         color = 'white'
       x, y, w = bounds.x, bounds.y, bounds.w
-      tp = self.text_renderer.textPath(label.text, w, label.font, label.alignment)
-      self.append(f'this.addPath({x}, {y}, "{tp}", "{color}")')
+      sx, sy, tp = self.text_renderer.textPath(label.text, w, label.font, label.alignment)
+      self.append(f'this.addPath({x}, {y}, {sx}, {sy}, "{tp}", "{color}")')
     else:
       x, y, w = label.x + self.offset.x, label.y + self.offset.y, label.w
       bold = 'true' if label.font.bold else 'false'
@@ -289,7 +289,7 @@ class HTMLJSVisitor(ViewVisitor):
     self.visitRectangle(Rectangle(r1, 'white'))
 
   def __str__(self):
-    template = self.load("View.js")
+    template = self.load("ViewCode.js")
 
     functions = []
     dispatcher = ["  populateView(view, hasSeq, isSd1, isSd132) {"]

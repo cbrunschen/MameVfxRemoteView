@@ -1613,9 +1613,12 @@ class Connector {
     return key;
   }
 
-  addPath(x, y, d, fill=null, stroke=null, stroke_width=null) {
+  addPath(x, y, sx, sy, d, fill=null, stroke=null, stroke_width=null) {
     const path = createElement("path");
-    path.setAttribute("transform", `translate(${x} ${y})`);
+    if (sx != 1.0 || sy != 1.0)
+      path.setAttribute("transform", `translate(${x} ${y}) scale(${sx} ${sy})`);
+    else
+      path.setAttribute("transform", `translate(${x} ${y})`);
     path.setAttribute("d", d);
     if (fill != null) path.setAttribute("fill", fill);
     if (stroke != null) path.setAttribute("stroke", stroke);

@@ -8,7 +8,7 @@ from textwrap import dedent
 from mysvg import SVGPath, SVGRect, SVGDrawing, SVGCircle
 from keys import KeyShape
 from viewvisitor import ViewVisitor
-from render import Font, Metrics
+from render_harfbuzz import Font
 
 @dataclass(frozen=True)
 class Shade:
