@@ -184,8 +184,8 @@ class HTMLJSVisitor(ViewVisitor):
       id = f'{alignment}{style}{to_id(label.text)}'
       if id not in self.defs:
         sx, sy, tp = self.text_renderer.textPath(label.text, w, label.font, label.alignment)
-        self.defs[id] = f'this.defPath("{id}", {sx}, {sy}, "{tp}", "{color}")'
-      self.append(f'this.addUse("{id}", {x}, {y});')
+        self.defs[id] = f'this.defPath("{id}", {sx:.5g}, {sy:.5g}, "{tp}", "{color}")'
+      self.append(f'this.addUse("{id}", {x:.5g}, {y:.5g});')
     else:
       x, y, w = label.x + self.offset.x, label.y + self.offset.y, label.w
       bold = 'true' if label.font.bold else 'false'
