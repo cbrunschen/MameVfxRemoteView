@@ -10,11 +10,14 @@ PRG="${DIR}/build_view.py"
 # Activate the virtual environment
 . ${DIR}/.venv/bin/activate
 
+OPTS=(--text-paths --segment-paths --real-logos)
+
 COMPRESS=true
 OUTPUT=artwork
-while getopts no: name
+while getopts bno: name
 do
     case $name in
+    b)  OPTS=();;
     n)  COMPRESS=false;;
     o)  OUTPUT="${OPTARG}";;
     ?)  printf "Usage: %s: [-o artwork-directory] <build-view.py flags>\n" $0
@@ -26,7 +29,7 @@ shift $(($OPTIND - 1))
 
 for K in vfx vfxsd sd1 sd132; do
   mkdir -p "${OUTPUT}/${K}"
-  ${PRG} -l ${K} -io 'panel:' --text-paths --segment-paths --real-logos $@ > "${OUTPUT}/${K}/${K}.lay"
+  ${PRG} -l ${K} -io 'panel:' ${OPTS[@]} $@ > "${OUTPUT}/${K}/${K}.lay"
   if [[ $COMPRESS = "true" ]]; then
     pushd "${OUTPUT}"
     zip -r "${K}.zip" "${K}"

@@ -1613,18 +1613,27 @@ class Connector {
     return key;
   }
 
-  addPath(x, y, sx, sy, d, fill=null, stroke=null, stroke_width=null) {
-    const path = createElement("path");
-    if (sx != 1.0 || sy != 1.0)
-      path.setAttribute("transform", `translate(${x} ${y}) scale(${sx} ${sy})`);
-    else
-      path.setAttribute("transform", `translate(${x} ${y})`);
-    path.setAttribute("d", d);
+  defPath(id, sx, sy, d, fill=null, stroke=null, stroke_width=null) {
+    const path = createElement("path", {
+      id: id,
+      d: d,
+    });
+    if (sx != 1.0 || sy != 1.0) path.setAttribute("transform", `scale(${sx} ${sy})`);
     if (fill != null) path.setAttribute("fill", fill);
     if (stroke != null) path.setAttribute("stroke", stroke);
     if (stroke_width != null) path.setAttribute("stroke-width", stroke_width);
-    this.decorationsContainer.appendChild(path);
+    this.definitions.appendChild(path);
     return path;
+  }
+
+  addUse(id, x, y) {
+    const use = createElement("use", {
+      href: `#${id}`,
+      x: x,
+      y: y,
+    });
+    this.decorationsContainer.appendChild(use);
+    return use;
   }
 
   svgForDrawing(x, y, w, h, viewBox, contents) {
@@ -1726,6 +1735,9 @@ class Connector {
     this.fontSizeFactor(true, true);
 
     // Now (re-)populate the root.
+    this.definitions = createElement("defs");
+    this.root.appendChild(this.definitions);
+
     this.decorationsContainer = createElement("g");
     this.root.appendChild(this.decorationsContainer);
 
@@ -1769,6 +1781,7 @@ class Connector {
       }
     }
 
+    this.populateDefinitions();
     this.populateView(this.view, hasSeq, isSd1, isSd132);
 
     let messageRect = Rect.from(this.displayContainer);

@@ -19,6 +19,7 @@ class HTMLJSVisitor(ViewVisitor):
     ):
     self.text_paths = text_paths
     self.indent = '    '
+    self.defs: dict[str, str] = {}
     self.views: list[HTMLJSView] = []
     self.offset: Vector = Vector(0, 0)
     self.text_renderer = TextRenderer()
@@ -165,8 +166,26 @@ class HTMLJSVisitor(ViewVisitor):
       if color == 'null':
         color = 'white'
       x, y, w = bounds.x, bounds.y, bounds.w
-      sx, sy, tp = self.text_renderer.textPath(label.text, w, label.font, label.alignment)
-      self.append(f'this.addPath({x}, {y}, {sx}, {sy}, "{tp}", "{color}")')
+
+      align = int(label.alignment)
+      if align >= Alignment.STRETCH.value:
+        align = Alignment.STRETCH.value
+      alignment = [ '', 'L_', 'R_', 'S_' ][align]
+
+      if label.font.bold:
+        if label.font.italic:
+          style = 'BI_'
+        else:
+          style = 'B_'
+      elif label.font.italic:
+        style = 'I_'
+      else:
+        style = ''
+      id = f'{alignment}{style}{to_id(label.text)}'
+      if id not in self.defs:
+        sx, sy, tp = self.text_renderer.textPath(label.text, w, label.font, label.alignment)
+        self.defs[id] = f'this.defPath("{id}", {sx}, {sy}, "{tp}", "{color}")'
+      self.append(f'this.addUse("{id}", {x}, {y});')
     else:
       x, y, w = label.x + self.offset.x, label.y + self.offset.y, label.w
       bold = 'true' if label.font.bold else 'false'
@@ -291,6 +310,7 @@ class HTMLJSVisitor(ViewVisitor):
   def __str__(self):
     template = self.load("ViewCode.js")
 
+    defs = ["  populateDefinitions() {"] + list(f'    {d}' for d in self.defs.values()) + ["  }"]
     functions = []
     dispatcher = ["  populateView(view, hasSeq, isSd1, isSd132) {"]
     options = [indent(dedent('''\
@@ -300,7 +320,7 @@ class HTMLJSVisitor(ViewVisitor):
         }
         var option;
       '''), '  ')]
-
+    
     for i, v in enumerate(self.views):
       camel_parts = [x.capitalize() for x in v.name.lower().split("_")]
       name = "".join(camel_parts)
@@ -322,6 +342,6 @@ class HTMLJSVisitor(ViewVisitor):
     dispatcher.append("  }")
 
     colordefs = ',\n'.join([f'  "{snake_to_upper_snake_case(c.name)}": "{c.hex}"' for c in colors])
-    code = '\n'.join(options + functions + dispatcher)
+    code = '\n'.join(defs + options + functions + dispatcher)
 
     return template.replace("//COLORS//", colordefs).replace('//CODE//', code)
