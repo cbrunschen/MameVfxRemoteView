@@ -355,13 +355,13 @@ def tryPath(s, family:str='Arimo', bold:bool=False, italic:bool=False):
 
   with open(f'/tmp/p.svg', 'w') as f:
     f.write(dedent(f'''\
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg width="3000" height="600" viewBox="0 0 15000 3000" xmlns="http://www.w3.org/2000/svg">
-<path stroke="black" stroke-width="1" transform="translate(0, 1000) scale(0.5, -0.5)" d="{path.svg()}"/>
-<text x="0" y="2000" font-family="{family}" font-style="{'italic' if italic else 'normal'}" font-weight="{'bold' if bold else 'regular'}" font-size="1024"
->{s}</text> 
-</svg>
-    '''))
+      <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+      <svg width="3000" height="600" viewBox="0 0 15000 3000" xmlns="http://www.w3.org/2000/svg">
+      <path stroke="black" stroke-width="1" transform="translate(0, 1000) scale(0.5, -0.5)" d="{path.svg()}"/>
+      <text x="0" y="2000" font-family="{family}" font-style="{'italic' if italic else 'normal'}" font-weight="{'bold' if bold else 'regular'}" font-size="1024"
+      >{s}</text> 
+      </svg>
+    ''').strip())
 
 def multiple():
   explore("Liberation Mono", False, True)

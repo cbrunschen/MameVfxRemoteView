@@ -29,7 +29,7 @@ class Vector:
     return self
 
   def __str__(self):
-    return f'({self.x:.5g},{self.y:.5g})'
+    return f'({fnum(self.x)},{fnum(self.y)})'
 
 
 @dataclass
@@ -128,10 +128,10 @@ class Rect:
     return Rect(enclosing.x + dx, enclosing.y + dy, self.w * scale, self.h * scale)
 
   def coords(self, separator=', '):
-    return separator.join([f'{v:.5g}' for v in [self.x, self.y, self.w, self.h]])
+    return separator.join([f'{fnum(v)}' for v in [self.x, self.y, self.w, self.h]])
 
   def __str__(self):
-    return f'({self.x:.5g},{self.y:.5g},{self.w:.5g},{self.h:.5g})'
+    return f'({fnum(self.x)},{fnum(self.y)},{fnum(self.w)},{fnum(self.h)})'
   
   def viewBox(self):
     return self.coords(' ')

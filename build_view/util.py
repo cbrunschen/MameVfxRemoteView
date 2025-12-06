@@ -44,6 +44,10 @@ def snake_to_title_case(s: str) -> str:
 def snake_to_upper_snake_case(s: str) -> str:
   return '_'.join(i.upper() for i in snake_parts(s))
 
+def fnum(v, decimals=5):
+  s = f'{v:.{decimals}f}'
+  return sub(r'\.?0+$', '', s)
+
 class LabelPosition(int, Enum):
   __str__ = Enum.__str__
   ABOVE = 1

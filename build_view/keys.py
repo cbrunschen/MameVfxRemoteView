@@ -91,7 +91,7 @@ def overlap(a, b):
   return a[1] > b[0] and a[0] < b[1]
 
 def tf(v):
-  return Fraction(f'{v:.5g}')
+  return Fraction(f'{fnum(v)}')
 
 def pf(f:Fraction, lcm:int):
   m = lcm / f.denominator
@@ -183,42 +183,42 @@ class KeyShaper:
 
     keys = []
 
-    llc = f"a {r:.5g} {r:.5g} 0 0 0 {r:.5g} {r:.5g}"
-    lrc = f"a {r:.5g} {r:.5g} 0 0 0 {r:.5g} {-r:.5g}"
+    llc = f"a {fnum(r)} {fnum(r)} 0 0 0 {fnum(r)} {fnum(r)}"
+    lrc = f"a {fnum(r)} {fnum(r)} 0 0 0 {fnum(r)} {fnum(-r)}"
 
-    bw = f"V {lw-r:.5g} {llc} h {ww-d:.5g} {lrc}"
-    b = f"M 0 0 V {lb-r:.5g} {llc} h {wb-d:.5g} {lrc} V 0  Z"
+    bw = f"V {fnum(lw-r)} {llc} h {fnum(ww-d)} {lrc}"
+    b = f"M 0 0 V {fnum(lb-r)} {llc} h {fnum(wb-d)} {lrc} V 0  Z"
 
     (tl, tr) = wtl(0, 0)
-    keys.append(KeyShape(Rect(0 * aw, 0, ww, lw), f"M 0 0 {bw} V {yw:.5g} H {tr:.5g} V 0 Z", 0))
+    keys.append(KeyShape(Rect(0 * aw, 0, ww, lw), f"M 0 0 {bw} V {fnum(yw)} H {fnum(tr)} V 0 Z", 0))
 
     keys.append(KeyShape(Rect(btl(1), 0, wb, lb), b, 1))
 
     (tl, tr) = wtl(2, 1)
-    keys.append(KeyShape(Rect(1 * aw, 0, ww, lw), f"M {tl:.5g} 0 V {yw:.5g} H 0 {bw} V {yw:.5g} H {tr:.5g} V 0 Z", 2))
+    keys.append(KeyShape(Rect(1 * aw, 0, ww, lw), f"M {fnum(tl)} 0 V {fnum(yw)} H 0 {bw} V {fnum(yw)} H {fnum(tr)} V 0 Z", 2))
 
     keys.append(KeyShape(Rect(btl(3), 0, wb, lb), b, 3))
 
     (tl, tr) = wtl(4, 2)
-    keys.append(KeyShape(Rect(2 * aw, 0, ww, lw), f"M {tl:.5g} 0 V {yw:.5g} H 0 {bw} V 0 Z", 4))
+    keys.append(KeyShape(Rect(2 * aw, 0, ww, lw), f"M {fnum(tl)} 0 V {fnum(yw)} H 0 {bw} V 0 Z", 4))
     
     (tl, tr) = wtl(5, 3)
-    keys.append(KeyShape(Rect(3 * aw, 0, ww, lw), f"M 0 0 {bw} V {yw:.5g} H {tr:.5g} V 0 Z", 5))
+    keys.append(KeyShape(Rect(3 * aw, 0, ww, lw), f"M 0 0 {bw} V {fnum(yw)} H {fnum(tr)} V 0 Z", 5))
 
     keys.append(KeyShape(Rect(btl(6), 0, wb, lb), b, 6))
 
     (tl, tr) = wtl(7, 4)
-    keys.append(KeyShape(Rect(4 * aw, 0, ww, lw), f"M {tl:.5g} 0 V {yw:.5g} H 0 {bw} V {yw:.5g} H {tr:.5g} V 0 Z", 7))
+    keys.append(KeyShape(Rect(4 * aw, 0, ww, lw), f"M {fnum(tl)} 0 V {fnum(yw)} H 0 {bw} V {fnum(yw)} H {fnum(tr)} V 0 Z", 7))
 
     keys.append(KeyShape(Rect(btl(8), 0, wb, lb), b, 8))
 
     (tl, tr) = wtl(9, 5)
-    keys.append(KeyShape(Rect(5 * aw, 0, ww, lw), f"M {tl:.5g} 0 V {yw:.5g} H 0 {bw} V {yw:.5g} H {tr:.5g} V 0 Z", 9))
+    keys.append(KeyShape(Rect(5 * aw, 0, ww, lw), f"M {fnum(tl)} 0 V {fnum(yw)} H 0 {bw} V {fnum(yw)} H {fnum(tr)} V 0 Z", 9))
 
     keys.append(KeyShape(Rect(btl(10), 0, wb, lb), b, 10))
 
     (tl, tr) = wtl(11, 6)
-    keys.append(KeyShape(Rect(6 * aw, 0, ww, lw), f"M {tl:.5g} 0 V {yw:.5g} H 0 {bw} V 0 Z", 11))
+    keys.append(KeyShape(Rect(6 * aw, 0, ww, lw), f"M {fnum(tl)} 0 V {fnum(yw)} H 0 {bw} V 0 Z", 11))
 
     # and finally the finishing top key
     keys.append(KeyShape(Rect(0 * aw, 0, ww, lw), f"M 0 0 {bw} V 0 Z", 12))
@@ -232,10 +232,10 @@ class KeyShaper:
   def ps(self, r = 1.0, file=stdout):
     w = 7 * w_white + 6 * kerf_x_ww
     h = l_white
-    print(f'<svg version="1.1" width="{w:.5g} mm" height="{h:.5g} mm" viewBox="0 0 {w:.5g} {h:.5g}" xmlns="http://www.w3.org/2000/svg">', file=file)
+    print(f'<svg version="1.1" width="{fnum(w)} mm" height="{fnum(h)} mm" viewBox="0 0 {fnum(w)} {fnum(h)}" xmlns="http://www.w3.org/2000/svg">', file=file)
     for i, ks in enumerate(self.key_shapes(r)):
       color = 'red' if ks.black else 'green'
-      print(f'<path transform="translate({ks.bounds.x:.5g} {ks.bounds.y:.5g})" fill="{color}" d="{ks.path}" />', file=file)
+      print(f'<path transform="translate({fnum(ks.bounds.x)} {fnum(ks.bounds.y)})" fill="{color}" d="{ks.path}" />', file=file)
     print("</svg>", file=file)
   
   def make_intervals(self, breakpoints, total):

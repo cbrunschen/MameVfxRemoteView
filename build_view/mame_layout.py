@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from textwrap import dedent
-
 from dataclasses import dataclass, field
 from math import tan, radians
 from rect import *
@@ -260,10 +258,10 @@ class MameLayoutVisitor(ViewVisitor):
 
   def layout_bounds(self, bounds: Rect, state=None):
     return Element('bounds', clean({
-      'x': f'{bounds.x:.5g}',
-      'y': f'{bounds.y:.5g}',
-      'width': f'{bounds.w:.5g}',
-      'height':f'{bounds.h:.5g}',
+      'x': f'{fnum(bounds.x)}',
+      'y': f'{fnum(bounds.y)}',
+      'width': f'{fnum(bounds.w)}',
+      'height':f'{fnum(bounds.h)}',
       'state':state,
       }), [])
 
@@ -290,10 +288,10 @@ class MameLayoutVisitor(ViewVisitor):
       rgb = color.rgb
       return Element('color', clean({
           **kwargs,
-          'red': f'{rgb[0]:.5g}',
-          'green': f'{rgb[1]:.5g}',
-          'blue': f'{rgb[2]:.5g}',
-          'alpha': f'{rgb[3]:.5g}' if len(rgb) == 4 else None,
+          'red': f'{fnum(rgb[0])}',
+          'green': f'{fnum(rgb[1])}',
+          'blue': f'{fnum(rgb[2])}',
+          'alpha': f'{fnum(rgb[3])}' if len(rgb) == 4 else None,
           }),
         []
       )
@@ -773,7 +771,7 @@ class MameLayoutVisitor(ViewVisitor):
     w = (bottom_x - top_x) + 1.25 + (label.bounds.h + 1.5) * tan(radians(12))
     h = label.font.baseline + 1.5
     
-    name = to_id(f'multipage_{bottom_x - top_x}_x_{label.bounds.h}')
+    name = to_id(f'multipage_{fnum(bottom_x - top_x)}_x_{fnum(label.bounds.h)}')
     if not name in self.decoration_definitions:
       drawing = SVGDrawing(Rect(0, 0, w, h), name) \
         .addItem('path', SVGPath(MultiPageChevrons.svgPath(w, h).strip(), stroke_width="0.25", stroke=True, fill=False))
@@ -851,7 +849,7 @@ class MameLayoutVisitor(ViewVisitor):
     for id, destination in self.group_definitions.items():
       b = destination.bounds
       group = Element('group', {'name': id})
-      group.append(Element('bounds', { 'x': b.x, 'y': b.y, 'width': b.w, 'height' : b.h }))
+      group.append(self.layout_bounds(b))
       group.extend(destination.decorations)
       group.extend(destination.texts)
       group.extend(destination.vfds)

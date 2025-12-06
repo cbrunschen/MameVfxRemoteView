@@ -4,6 +4,7 @@ from textwrap import indent, dedent, wrap
 from dataclasses import dataclass, field
 from colors import colors
 from view import *
+from util import fnum
 from render_harfbuzz import TextRenderer
 
 @dataclass
@@ -184,8 +185,8 @@ class HTMLJSVisitor(ViewVisitor):
       id = f'{alignment}{style}{to_id(label.text)}'
       if id not in self.defs:
         sx, sy, tp = self.text_renderer.textPath(label.text, w, label.font, label.alignment)
-        self.defs[id] = f'this.defPath("{id}", {sx:.5g}, {sy:.5g}, "{tp}", "{color}")'
-      self.append(f'this.addUse("{id}", {x:.5g}, {y:.5g});')
+        self.defs[id] = f'this.defPath("{id}", {fnum(sx)}, {fnum(sy)}, "{tp}", "{color}")'
+      self.append(f'this.addUse("{id}", {fnum(x)}, {fnum(y)});')
     else:
       x, y, w = label.x + self.offset.x, label.y + self.offset.y, label.w
       bold = 'true' if label.font.bold else 'false'

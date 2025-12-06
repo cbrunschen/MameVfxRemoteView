@@ -352,10 +352,10 @@ class MultiPageChevrons(ViewItem):
   def svgPath(w: float, h: float):
     ta = tan(radians(12))
     hh = h - 1.5
-    return dedent(f'''
-      M 1 0.125 l {w - 1.125} {0} -{hh * ta} {hh} \
-      M 0 1.125 l {w - 1.125 - ta} 0 -{hh * ta} {hh} \
-    ''').strip()
+    return ' '.join(dedent(f'''
+    M 1 0.125 l {fnum(w - 1.125)} {0} -{fnum(hh * ta)} {fnum(hh)}
+    M 0 1.125 l {fnum(w - 1.125 - ta)} 0 -{fnum(hh * ta)} {fnum(hh)}
+    ''').strip().splitlines())
 
 
 @dataclass

@@ -42,12 +42,12 @@ class SVGRect(SVGPathElement):
   
   def toSvgElement(self, r:float|None=None, fill:str|None=None, fill_rule:str|None = None, stroke:str|None=None, stroke_width:str|None=None, color:str|None=None):
     rr = r if r is not None else self.r
-    rx = f"{rr:.5g}"
+    rx = f"{fnum(rr)}"
     return Element('rect', clean({
-      'x': f"{self.rect.x:.5g}", 
-      'y': f"{self.rect.y:.5g}", 
-      'width': f"{self.rect.w:.5g}", 
-      'height': f"{self.rect.h:.5g}",
+      'x': f"{fnum(self.rect.x)}", 
+      'y': f"{fnum(self.rect.y)}", 
+      'width': f"{fnum(self.rect.w)}", 
+      'height': f"{fnum(self.rect.h)}",
       'rx': rx,
       'fill': self.overrideColor(self.fill, fill, color),
       'stroke': self.overrideColor(self.stroke, stroke, color),
@@ -64,11 +64,11 @@ class SVGCircle(SVGPathElement):
   
   def toSvgElement(self, r:float|None=None, fill:str|None=None, fill_rule:str|None = None, stroke:str|None=None, stroke_width:str|None=None, color:str|None=None):
     rr = r if r is not None else self.r
-    rx = f"{rr:.5g}"
+    rx = f"{fnum(rr)}"
     return Element('circle', clean({
-      'cx': f"{self.center.x:.5g}", 
-      'cy': f"{self.center.y:.5g}",
-      'r': f"{self.r:.5g}",
+      'cx': f"{fnum(self.center.x)}", 
+      'cy': f"{fnum(self.center.y)}",
+      'r': f"{fnum(self.r)}",
       'fill': self.overrideColor(self.fill, fill, color),
       'stroke': self.overrideColor(self.stroke, stroke, color),
       'stroke-width': stroke_width if stroke_width is not None else self.stroke_width
@@ -125,11 +125,11 @@ class SVGDrawing:
   
   def toSvgElement(self, colors: dict[str,str]|None = None):
     return Element('svg', {
-      'x': f'{self.bounds.x:.5g}',
-      'y': f'{self.bounds.y:.5g}',
-      'width': f'{self.bounds.w:.5g}',
-      'height': f'{self.bounds.h:.5g}',
-      'viewBox': f'{self.bounds.x:.5g} {self.bounds.y:.5g} {self.bounds.w:.5g} {self.bounds.h:.5g}',
+      'x': f'{fnum(self.bounds.x)}',
+      'y': f'{fnum(self.bounds.y)}',
+      'width': f'{fnum(self.bounds.w)}',
+      'height': f'{fnum(self.bounds.h)}',
+      'viewBox': f'{fnum(self.bounds.x)} {fnum(self.bounds.y)} {fnum(self.bounds.w)} {fnum(self.bounds.h)}',
     }).extend([
       item.toSvgElement(color=self.get_color(part, colors)) for part, item in self.items.items()
     ])
