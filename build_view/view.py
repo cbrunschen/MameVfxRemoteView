@@ -78,6 +78,7 @@ class Light(ViewItem):
 class Media(ViewItem):
   bounds: Rect
   name: str
+  tag: str
   number: int
   present: SVGDrawing
   absent: SVGDrawing | None = None

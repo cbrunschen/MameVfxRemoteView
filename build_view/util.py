@@ -1,11 +1,22 @@
 #!/usr/bin/env python
 
+import re
 from re import sub
-from textwrap import wrap
+from textwrap import indent, dedent, wrap
 from sys import stderr
 from enum import Enum
 
 DEBUG = False
+
+leading_spaces = re.compile(r'^(  )+', re.M)
+
+def to_tabs(m: re.Match):
+  f, t = m.span(0)
+  return '\t' * int((t - f) / 2)
+
+def redent(s, n_tabs):
+  s = dedent(s)    
+  return indent(leading_spaces.sub(to_tabs, dedent(s)), n_tabs * '\t')
 
 def set_debug(debug: bool = False):
   global DEBUG

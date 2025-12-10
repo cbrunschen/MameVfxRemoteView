@@ -514,19 +514,19 @@ class MameLayoutVisitor(ViewVisitor):
     )
 
   def visitMedia(self, media: 'Media'):
-    bit = 1 << media.number
-    maskval = f'0x{bit:04x}'
-
     name = f'media_{to_id(media.name)}'
     if name not in self.decoration_definitions:
       contents = list()
       if media.absent:
-        contents.append(self.layout_svg_image(str(media.absent.toSvgElement(media.colors)), state='0', statemask=maskval))
-      contents.append(self.layout_svg_image(str(media.present.toSvgElement(media.colors)), state=maskval, statemask=maskval))
+        contents.append(self.layout_svg_image(str(media.absent.toSvgElement(media.colors)), state='0'))
+      contents.append(self.layout_svg_image(str(media.present.toSvgElement(media.colors)), state='1'))
       self.decoration_definitions[name] = self.layout_element(name=name, contents=contents)
 
     self.decorations.append(
-      self.layout_element(ref=name, name='media', bounds=media.bounds)
+      self.layout_element(ref=name, id=name, bounds=media.bounds)
+    )
+    self.init_code[self.visiting].append(
+      f'media_change_notifiers["{media.tag}"] = add_media_change_notifier(view, "{name}", "{media.tag}")'
     )
 
   def visitLabel(self, label: 'Label'):
@@ -670,7 +670,7 @@ class MameLayoutVisitor(ViewVisitor):
         self.layout_color(col='key_black_velocity_min' if key.black else 'key_white_velocity_min', state="1"),
         self.layout_color(col='key_black_velocity_max' if key.black else 'key_white_velocity_max', state="127"),
         self.layout_color(col='key_black_pressure_min' if key.black else 'key_white_pressure_min', state="128"),
-        self.layout_color(col='key_black_pressure_max' if key.black else 'key_white_pressure_max', state="255"),
+        self.layout_color(col='key_black_pressure_max' if key.black else 'key_white_pressure_max', state="254"),
       ]
       ))
 
@@ -890,7 +890,9 @@ class MameLayoutVisitor(ViewVisitor):
     code = '\n'.join(init_code)
 
     script = Element('script', {}, [
-      CDATA(template.replace('--CODE--', code))
+      CDATA(template \
+            .replace('\n--CODE--\n', code) \
+            )
     ])
     layout.append(script)
 

@@ -744,7 +744,7 @@ class FullViewBuilder(ViewBuilder):
     cart_inside = cart_outside.inset(2, 2)
     cart = self.add(Rectangle(cart_outside, 'body_down'))
     self.add(Media(
-      cart_inside, 'cartridge', 0, 
+      cart_inside, 'cartridge', ':cart', 0, 
       present=Drawings.Cartridge, 
       absent=Drawings.CartridgeSlotCover, 
       colors = {
@@ -870,7 +870,7 @@ class FullViewBuilder(ViewBuilder):
         'led': 'light_off', 
       }
       floppy_media = self.add(Media(
-        Rect(-119, 129.5, 102, 13), 'floppy', 1, 
+        Rect(-119, 129.5, 102, 13), 'floppy', ':wd1772:0:35dd', 1, 
         Drawings.FloppyDriveWithDisk, 
         Drawings.FloppyDriveEmpty,
         colors = floppy_colors))

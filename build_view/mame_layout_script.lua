@@ -18,6 +18,19 @@ file:set_resolve_tags_callback(
 	end
 )
 
+-- Keep track of media change notifiers
+media_change_notifiers = {}
+function add_media_change_notifier(view, id, tag)
+	local media_element = view.items[id]
+	local image = machine.images[tag]
+	media_element:set_state(image.exists and 1 or 0)
+	return image:add_media_change_notifier(
+		function(loaded)
+			media_element:set_state(loaded == "loaded" and 1 or 0)
+		end
+	)
+end
+
 -----------------------------------------------------------------------
 -- Keys and Sliders library starts.
 -- Can be copied as-is to other layouts.
@@ -434,11 +447,22 @@ function KeyboardHandler:create(view, clickarea_id, key_id_prefix, port_prefix, 
 			return nil
 		end
 
+		function key:updateViewItemState()
+			if self.pressure > 0 then
+				self.item:set_state(127 + key.pressure)
+			elseif self.velocity > 0 then
+				self.item:set_state(self.velocity)
+			else
+				self.item:set_state(0)
+			end
+		end
+
 		function key:setVelocity(velocity)
 			if velocity ~= self.velocity or self.pressure ~= 0 then
 				self.velocity = velocity & 0x7f
 				self.pressure = 0
 				set_field_value(self.field, self.velocity)
+				self:updateViewItemState()
 			end
 		end
 
@@ -446,23 +470,9 @@ function KeyboardHandler:create(view, clickarea_id, key_id_prefix, port_prefix, 
 			if pressure ~= self.pressure then
 				self.pressure = pressure & 0x7f
 				set_field_value(self.field, (self.pressure << 7) | self.velocity)
+				self:updateViewItemState()
 			end
 		end
-
-		key.item:set_animation_state_callback(function()
-			new_state = 0
-			if key.pressure > 0 then
-				new_state = 127 + key.pressure
-			elseif key.velocity > 0 then
-				new_state = key.velocity
-			else
-				new_state = 0
-			end
-			if new_state ~= key.animation_state then
-				key.animation_state = new_state
-			end
-			return new_state
-		end)
 
 		table.insert(instance.keys, key)
 	end
