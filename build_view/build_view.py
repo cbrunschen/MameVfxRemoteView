@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 
-from textwrap import indent, dedent, wrap
-from dataclasses import dataclass, field
-from sys import argv, exit
+from sys import argv, stderr, exit
 from argparse import ArgumentParser, BooleanOptionalAction
 
 from view import *
 from view_builders import *
 from mame_layout import *
 from js_html import *
-from colors import colors, colors_by_name
 import util
-import render_harfbuzz as render
+import render
 
 def main():
+  print("MAIN")
   parser = ArgumentParser()
   group = parser.add_mutually_exclusive_group()
   group.add_argument('-l', '--layout', choices=['vfx','vfxsd','sd1','sd132'])
@@ -23,18 +21,20 @@ def main():
   parser.add_argument('-f', '--fonts', action=BooleanOptionalAction, default=False)
   parser.add_argument('-hc', '--hexcolors', action=BooleanOptionalAction, default=False)
   parser.add_argument('-tp', '--text-paths', action=BooleanOptionalAction, default=False)
-  parser.add_argument('-sp', '--segment-paths', action=BooleanOptionalAction, default=False)
-  parser.add_argument('--debug', action='store_true', default=False)
+  parser.add_argument('-s', '--segments', choices=['default','straight','real'], default='default')
+  parser.add_argument('-D', '--debug', action='store_true', default=False)
+  parser.add_argument('-tr', '--text-renderer', choices=render.choices, default=render.choices[0])
   # parser.add_argument('-fs', '--fontsize', default=1.4)
 
   args = parser.parse_args()
-  util.DEBUG = args.debug
-  render.set_debug(args.debug)
+  util.set_debug(args.debug)
+  render.configure(args.text_renderer)
 
   visitor = None
   if args.javascript:
     visitor = HTMLJSVisitor(
-      text_paths=args.text_paths
+      text_paths=args.text_paths,
+      segments=args.segments
     )
   elif args.layout:
     visitor = MameLayoutVisitor(
@@ -42,7 +42,7 @@ def main():
       fonts=args.fonts, 
       hexcolors=args.hexcolors, 
       text_paths=args.text_paths,
-      segment_paths=args.segment_paths
+      segments=args.segments
     )
   
   views = {
@@ -68,4 +68,5 @@ def main():
 #   eprint(f"  Color.get('{color.name}') = {Color.get(color.name)}")
 
 if __name__ == '__main__':
+  print("Running main()")
   exit(main())

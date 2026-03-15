@@ -4,10 +4,8 @@ import cairo
 import gi
 import io
 import os
-import re
-from math import sqrt, modf
 from dataclasses import dataclass, field
-from util import Alignment, dprint, eprint, set_debug
+from util import Alignment, dprint, set_debug
 from renderutil import Cubic, Metrics
 
 gi.require_version("Pango", "1.0")

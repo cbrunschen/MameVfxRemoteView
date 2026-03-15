@@ -1,3 +1,5 @@
+Running main()
+MAIN
 function standardize_color(color) {
   var ctx = document.createElement('canvas').getContext('2d');
   ctx.fillStyle = color;
@@ -75,24 +77,44 @@ DisplayBlinkState = {
   CHAR: 2
 };
 
-segmentPaths = [
-  "M1053 705 c-43 19 -57 47 -43 89 23 70 87 106 189 106 38 0 70 8 106 25 79 39 111 41 183 11 80 -34 119 -33 205 6 68 31 78 33 192 33 116 0 123 -1 195 -35 67 -31 87 -35 182 -40 101 -5 108 -7 137 -34 40 -38 50 -89 25 -118 -11 -11 -37 -29 -59 -39 -37 -17 -79 -19 -660 -18 -505 0 -626 2 -652 14z",
-  "M2519 963 c-20 13 -46 47 -63 81 -28 53 -31 69 -37 199 -7 155 -20 211 -75 319 -50 99 -68 199 -54 301 23 167 52 217 126 217 37 0 47 -5 77 -40 53 -63 74 -151 97 -410 5 -63 16 -167 24 -230 42 -326 45 -374 21 -419 -24 -47 -63 -54 -116 -18z",
-  "M2144 1089 c-59 43 -88 78 -135 161 -23 41 -75 112 -115 156 -108 119 -132 188 -136 386 -3 107 -1 118 17 132 11 9 28 16 37 16 25 0 92 -63 154 -145 29 -39 100 -129 158 -200 58 -72 113 -144 121 -162 19 -40 32 -106 41 -214 5 -68 3 -91 -9 -116 -28 -52 -74 -57 -133 -14z",
-  "M1515 1089 c-70 43 -69 41 -77 285 -3 121 -11 259 -18 306 -6 47 -13 142 -17 211 -6 141 5 183 54 195 78 20 124 -53 135 -216 13 -192 26 -274 61 -385 77 -245 76 -359 -3 -400 -39 -20 -99 -19 -135 4z",
-  "M1108 1087 c-32 36 -42 71 -50 163 -5 52 -11 122 -14 156 -6 55 -1 75 41 200 53 152 59 165 87 183 16 10 24 9 44 -4 31 -20 43 -51 55 -135 5 -36 17 -97 26 -137 14 -63 15 -81 3 -145 -37 -205 -43 -222 -88 -271 -30 -32 -80 -37 -104 -10z",
-  "M797 938 c-32 36 -44 102 -67 377 -19 222 -30 337 -42 428 -17 138 12 277 67 313 55 36 123 -6 173 -109 52 -106 54 -167 12 -292 -27 -78 -30 -102 -30 -205 0 -79 7 -147 20 -210 11 -51 20 -111 20 -133 0 -123 -97 -231 -153 -169z",
-  "M1940 2120 c-14 4 -56 8 -94 9 -80 1 -141 26 -181 73 -32 38 -32 78 1 118 48 56 84 67 249 74 146 7 151 7 195 -17 52 -27 99 -89 100 -130 0 -33 -31 -81 -63 -98 -27 -15 -125 -38 -157 -38 -14 1 -36 5 -50 9z",
-  "M1099 2129 c-51 10 -110 43 -132 73 -28 37 -16 88 32 138 36 38 41 40 95 40 64 0 115 -22 159 -68 32 -34 46 -97 28 -130 -23 -43 -109 -68 -182 -53z",
-  "M2279 2467 c-56 50 -69 80 -80 186 -6 51 -16 127 -24 169 -14 83 -10 123 25 213 36 95 44 146 31 203 -14 66 -14 205 -1 254 12 41 70 98 100 98 52 0 75 -100 100 -435 6 -77 22 -241 36 -364 28 -255 27 -268 -37 -325 -54 -49 -94 -49 -150 1z",
-  "M1701 2579 c-24 24 -40 122 -44 261 -2 95 1 112 27 178 15 41 44 94 63 119 19 25 57 92 84 149 58 121 94 164 137 164 38 0 78 -32 90 -73 19 -60 22 -181 7 -238 -20 -77 -116 -277 -180 -376 -30 -46 -66 -106 -80 -133 -35 -69 -69 -86 -104 -51z",
-  "M1372 2456 c-40 28 -52 66 -52 166 0 92 -27 323 -55 468 -21 108 -19 246 3 290 21 44 59 65 96 56 47 -12 123 -92 146 -152 28 -77 28 -203 -1 -281 -21 -55 -22 -62 -10 -218 6 -88 14 -178 16 -201 6 -54 -11 -110 -38 -129 -28 -19 -76 -19 -105 1z",
-  "M1067 2721 c-19 11 -122 161 -156 228 -42 81 -51 129 -51 276 0 113 3 147 18 175 39 80 102 35 199 -141 28 -52 56 -112 62 -134 6 -22 11 -114 11 -205 0 -134 -3 -170 -16 -188 -16 -24 -39 -27 -67 -11z",
-  "M695 2447 c-45 23 -76 54 -91 90 -8 18 -18 101 -24 190 -18 298 -21 328 -52 516 -26 164 -29 194 -18 235 23 91 68 107 130 44 46 -45 59 -86 71 -217 5 -55 13 -143 18 -195 11 -120 37 -199 101 -302 48 -78 50 -85 50 -153 0 -95 -15 -143 -60 -187 -42 -42 -75 -48 -125 -21z",
-  "M1550 3539 c-14 5 -57 24 -97 44 -107 54 -134 56 -218 12 -79 -42 -105 -41 -170 3 -35 23 -53 28 -145 33 -131 8 -181 24 -194 62 -14 39 9 78 54 94 49 17 1278 18 1315 1 51 -23 42 -87 -18 -132 -21 -15 -48 -21 -115 -26 -77 -4 -94 -9 -140 -38 -85 -55 -195 -76 -272 -53z",
-  "M2619 3393 c-19 12 -45 43 -59 67 -36 65 -36 183 0 255 48 93 136 107 207 33 60 -61 76 -152 48 -257 -17 -63 -45 -97 -94 -111 -52 -14 -64 -13 -102 13z",
-  "M512 4422 c-38 8 -46 15 -63 51 -37 83 -18 153 51 181 36 14 127 16 863 16 642 0 827 -3 847 -13 16 -8 31 -31 44 -64 16 -46 17 -57 5 -94 -8 -24 -26 -51 -42 -63 -28 -21 -34 -21 -845 -23 -501 0 -834 3 -860 9z",
-];
+segmentPaths = {
+  'real': [
+    "M1053 705 c-43 19 -57 47 -43 89 23 70 87 106 189 106 38 0 70 8 106 25 79 39 111 41 183 11 80 -34 119 -33 205 6 68 31 78 33 192 33 116 0 123 -1 195 -35 67 -31 87 -35 182 -40 101 -5 108 -7 137 -34 40 -38 50 -89 25 -118 -11 -11 -37 -29 -59 -39 -37 -17 -79 -19 -660 -18 -505 0 -626 2 -652 14z",
+    "M2519 963 c-20 13 -46 47 -63 81 -28 53 -31 69 -37 199 -7 155 -20 211 -75 319 -50 99 -68 199 -54 301 23 167 52 217 126 217 37 0 47 -5 77 -40 53 -63 74 -151 97 -410 5 -63 16 -167 24 -230 42 -326 45 -374 21 -419 -24 -47 -63 -54 -116 -18z",
+    "M2144 1089 c-59 43 -88 78 -135 161 -23 41 -75 112 -115 156 -108 119 -132 188 -136 386 -3 107 -1 118 17 132 11 9 28 16 37 16 25 0 92 -63 154 -145 29 -39 100 -129 158 -200 58 -72 113 -144 121 -162 19 -40 32 -106 41 -214 5 -68 3 -91 -9 -116 -28 -52 -74 -57 -133 -14z",
+    "M1515 1089 c-70 43 -69 41 -77 285 -3 121 -11 259 -18 306 -6 47 -13 142 -17 211 -6 141 5 183 54 195 78 20 124 -53 135 -216 13 -192 26 -274 61 -385 77 -245 76 -359 -3 -400 -39 -20 -99 -19 -135 4z",
+    "M1108 1087 c-32 36 -42 71 -50 163 -5 52 -11 122 -14 156 -6 55 -1 75 41 200 53 152 59 165 87 183 16 10 24 9 44 -4 31 -20 43 -51 55 -135 5 -36 17 -97 26 -137 14 -63 15 -81 3 -145 -37 -205 -43 -222 -88 -271 -30 -32 -80 -37 -104 -10z",
+    "M797 938 c-32 36 -44 102 -67 377 -19 222 -30 337 -42 428 -17 138 12 277 67 313 55 36 123 -6 173 -109 52 -106 54 -167 12 -292 -27 -78 -30 -102 -30 -205 0 -79 7 -147 20 -210 11 -51 20 -111 20 -133 0 -123 -97 -231 -153 -169z",
+    "M1940 2120 c-14 4 -56 8 -94 9 -80 1 -141 26 -181 73 -32 38 -32 78 1 118 48 56 84 67 249 74 146 7 151 7 195 -17 52 -27 99 -89 100 -130 0 -33 -31 -81 -63 -98 -27 -15 -125 -38 -157 -38 -14 1 -36 5 -50 9z",
+    "M1099 2129 c-51 10 -110 43 -132 73 -28 37 -16 88 32 138 36 38 41 40 95 40 64 0 115 -22 159 -68 32 -34 46 -97 28 -130 -23 -43 -109 -68 -182 -53z",
+    "M2279 2467 c-56 50 -69 80 -80 186 -6 51 -16 127 -24 169 -14 83 -10 123 25 213 36 95 44 146 31 203 -14 66 -14 205 -1 254 12 41 70 98 100 98 52 0 75 -100 100 -435 6 -77 22 -241 36 -364 28 -255 27 -268 -37 -325 -54 -49 -94 -49 -150 1z",
+    "M1701 2579 c-24 24 -40 122 -44 261 -2 95 1 112 27 178 15 41 44 94 63 119 19 25 57 92 84 149 58 121 94 164 137 164 38 0 78 -32 90 -73 19 -60 22 -181 7 -238 -20 -77 -116 -277 -180 -376 -30 -46 -66 -106 -80 -133 -35 -69 -69 -86 -104 -51z",
+    "M1372 2456 c-40 28 -52 66 -52 166 0 92 -27 323 -55 468 -21 108 -19 246 3 290 21 44 59 65 96 56 47 -12 123 -92 146 -152 28 -77 28 -203 -1 -281 -21 -55 -22 -62 -10 -218 6 -88 14 -178 16 -201 6 -54 -11 -110 -38 -129 -28 -19 -76 -19 -105 1z",
+    "M1067 2721 c-19 11 -122 161 -156 228 -42 81 -51 129 -51 276 0 113 3 147 18 175 39 80 102 35 199 -141 28 -52 56 -112 62 -134 6 -22 11 -114 11 -205 0 -134 -3 -170 -16 -188 -16 -24 -39 -27 -67 -11z",
+    "M695 2447 c-45 23 -76 54 -91 90 -8 18 -18 101 -24 190 -18 298 -21 328 -52 516 -26 164 -29 194 -18 235 23 91 68 107 130 44 46 -45 59 -86 71 -217 5 -55 13 -143 18 -195 11 -120 37 -199 101 -302 48 -78 50 -85 50 -153 0 -95 -15 -143 -60 -187 -42 -42 -75 -48 -125 -21z",
+    "M1550 3539 c-14 5 -57 24 -97 44 -107 54 -134 56 -218 12 -79 -42 -105 -41 -170 3 -35 23 -53 28 -145 33 -131 8 -181 24 -194 62 -14 39 9 78 54 94 49 17 1278 18 1315 1 51 -23 42 -87 -18 -132 -21 -15 -48 -21 -115 -26 -77 -4 -94 -9 -140 -38 -85 -55 -195 -76 -272 -53z",
+    "M2619 3393 c-19 12 -45 43 -59 67 -36 65 -36 183 0 255 48 93 136 107 207 33 60 -61 76 -152 48 -257 -17 -63 -45 -97 -94 -111 -52 -14 -64 -13 -102 13z",
+    "M512 4422 c-38 8 -46 15 -63 51 -37 83 -18 153 51 181 36 14 127 16 863 16 642 0 827 -3 847 -13 16 -8 31 -31 44 -64 16 -46 17 -57 5 -94 -8 -24 -26 -51 -42 -63 -28 -21 -34 -21 -845 -23 -501 0 -834 3 -860 9z",
+  ],
+  'straight' : [
+    "M1132,690l1317,0l84,94l-7,62l-104,94l-1317,0l-84,-94l7,-62 Z",
+    "M2458,982l-120,1097l84,94l62,0l104,-94l120,-1097l-84,-94l-62,0 Z",
+    "M2406,1002l-46,418l-545,637l46,-418 Z",
+    "M1631,1002l-115,1055l250,0l115,-1055 Z",
+    "M1106,1002l-46,418l405,637l46,-418 Z",
+    "M808,982l-120,1097l84,94l62,0l104,-94l120,-1097l-84,-94l-62,0 Z",
+    "M1659,2120l633,0l84,94l-7,62l-104,94l-633,0 Z",
+    "M975,2120l633,0l-27,250l-633,0l-84,-94l7,-62 Z",
+    "M2302,2412l-120,1097l84,94l62,0l104,-94l120,-1097l-84,-94l-62,0 Z",
+    "M1775,2432l-46,418l405,637l46,-418 Z",
+    "M1475,2432l-115,1055l250,0l115,-1055 Z",
+    "M1425,2432l-46,418l-545,637l46,-418 Z",
+    "M652,2412l-120,1097l84,94l62,0l104,-94l120,-1097l-84,-94l-62,0 Z",
+    "M819,3550l1317,0l84,94l-7,62l-104,94l-1317,0l-84,-94l7,-62 Z",
+    "M2703,3370l80,0l98,110l-22,200l-122,110l-80,0l-98,-110l22,-200 Z",
+    "M534,4425l1730,0l53,60l-14,130l-67,60l-1730,0l-53,-60l14,-130 Z"
+  ],
+};
 charWidth = 342;
 charHeight = 572;
 segmentScale = 0.1;
@@ -142,7 +164,7 @@ function pointIn(el, x, y) {
 }
 
 class Display {
-  constructor(parent, rows, cols) {
+  constructor(parent, rows, cols, segments) {
     this.cells = new Array();
     this.width = charWidth * cols;
     this.height = charHeight * rows;
@@ -151,8 +173,8 @@ class Display {
     var templateCell = createElement("g", {
       transform: `scale(${segmentScale}, ${segmentScale})`
     });
-    for (var i = 0; i < segmentPaths.length; i++) {
-      templateCell.appendChild(createElement("path", {d:segmentPaths[i]}));
+    for (var i = 0; i < segmentPaths[segments].length; i++) {
+      templateCell.appendChild(createElement("path", {d:segmentPaths[segments][i]}));
     }
 
     for (var row = 0; row < 2; row++) {
@@ -705,7 +727,8 @@ class TouchPoint {
 }
 
 class Key {
-  constructor(x, y, number, black, path) {
+  constructor(keyboard, x, y, number, black, path) {
+    this.keyboard = keyboard;
     this.x = x;
     this.y = y;
     this.number = number;
@@ -735,38 +758,6 @@ class Key {
       d: path,
       fill: this.color
     });
-
-    let that = this;
-    this.element.addEventListener("touchstart", function(e) { that.touchstart(e); }, true);
-    this.element.addEventListener("touchmove", function(e) { that.touchmove(e); }, true);
-    this.element.addEventListener("touchend", function(e) { that.touchend(e); }, true);
-    this.element.addEventListener("touchcancel", function(e) { that.touchend(e); }, true);
-
-    this.element.addEventListener(
-      "mousedown", 
-      function(e) { that.grab(e); },
-      { capture: false, passive: false }
-    );
-    this.element.addEventListener(
-      "mouseenter", 
-      function(e) { that.drag(e); },
-      { capture: false, passive: true }
-    );
-    this.element.addEventListener(
-      "mousemove", 
-      function(e) { that.drag(e); },
-      { capture: false, passive: true }
-    );
-    this.element.addEventListener(
-      "mouseup",
-      function(e) { that.release(); },
-      { capture: false, passive: true }
-    );
-    this.element.addEventListener(
-      "mouseleave",
-      function(e) { that.release(); },
-      { capture: false, passive: true }
-    );
   }
 
   updateColor() {
@@ -784,150 +775,77 @@ class Key {
       this.element.setAttribute("fill", this.color);
     }
   }
-
-  grab(e) {
-    if (this.velocity == 0) {
-      // first touch/mouse down
-      this.velocity = 64;
-      this.updateColor();
-    } else {
-      // subsequent multi-touch added or removed
-      this.updateColor();
-    }
-    // console.log("Grabbing with handleY=" + this.handleY + ", p.y=" + p.y + " => dragOffset=" + this.dragOffset);
-  }
-
-  drag(e) {
-    if (e.buttons != 0) {
-      if (this.velocity == 0) {
-        this.grab(e);
-      } else {
-        this.pressure = 64;
-        this.updateColor();
-      }
-    }
-  }
-
-  release(e) {
-    this.pressure = 0;
-    this.velocity = 0;
-    this.updateColor();
-  }
-
-  touchstart(e) {
-    e.preventDefault();
-    
-    for (var i = 0; i < e.targetTouches.length; i++) {
-      var touch = e.targetTouches.item(i);
-      this.activeTouches.set(touch.identifier, touch);
-    }
-
-    center = TouchPoint.center(this.activeTouches);
-    if (center != null) {
-      this.grab(center.x, center.y);
-    }
-  }
-
-  touchmove(e) {
-    e.preventDefault();
-    
-    for (var i = 0; i < e.changedTouches.length; i++) {
-      var touch = e.changedTouches.item(i);
-      if (this.activeTouches.has(touch.identifier)) {
-        this.activeTouches.set(touch.identifier, touch);
-      }
-    }
-    center = TouchPoint.center(this.activeTouches);
-    if (center != null) {
-      this.drag(center.x, center.y);
-    }
-  }
-
-  touchend(e) {
-    for (var i = 0; i < e.changedTouches.length; i++) {
-      var touch = e.changedTouches.item(i);
-      this.activeTouches.delete(touch.identifier)
-    }
-    if (this.activeTouches.size == 0) {
-      this.release();
-    } else {
-      center = TouchPoint.center(this.activeTouches);
-      if (center != null) {
-        this.grab(center.x, center.y);
-      }
-    }
-  }
 }
 
 class Keyboard {
-  octave_shift = 164.5
-  w_white = 22.5
-  f_white = w_white / (w_white + 1)
-  l_black = 88
-  l_white = 138
-  y_12 = (l_black + 2) / l_white
-  y_12_0 = l_black / l_white
+  static octave_shift = 164.5;
+  static w_white = 22.5;
+  static f_white = Keyboard.w_white / (Keyboard.w_white + 1);
+  static l_black = 88;
+  static l_white = 138;
+  static y_12 = (Keyboard.l_black + 2) / Keyboard.l_white;
+  static y_12_0 = Keyboard.l_black / Keyboard.l_white;
 
-  strike_both_bottom = l_black - 3
-  strike_both_top = l_black - 43
+  static strike_both_bottom = Keyboard.l_black - 3;
+  static strike_both_top = Keyboard.l_black - 43;
 
-  strike_white_low_bottom = l_white - 3
-  strike_white_low_top = l_white - 43
+  static strike_white_low_bottom = Keyboard.l_white - 3;
+  static strike_white_low_top = Keyboard.l_white - 43;
 
-  strike_white_break = (strike_both_bottom + strike_white_low_top) / 2
+  static strike_white_break = (Keyboard.strike_both_bottom + Keyboard.strike_white_low_top) / 2;
 
-  pressure_length = 25
-  pressure_hysteresis = 3
+  static pressure_length = 25;
+  static pressure_hysteresis = 3;
 
   // The ranges where we can find the tops of the 12 keys within an octave
-  k12 = [
-    { key:0,  x0:0,            x1:79027/1000000, black:false, l:l_white },
-    { key:1,  x0:1769/20000,   x1:807/5000,      black:true,  l:l_black },
-    { key:2,  x0:8541/50000,   x1:4997/20000,    black:false, l:l_white },
-    { key:3,  x0:25927/100000, x1:16611/50000,   black:true,  l:l_black },
-    { key:4,  x0:8541/25000,   x1:42067/100000,  black:false, l:l_white },
-    { key:5,  x0:1707/4000,    x1:4997/10000,    black:false, l:l_white },
-    { key:6,  x0:1591/3125,    x1:58207/100000,  black:true,  l:l_black },
-    { key:7,  x0:59149/100000, x1:16611/25000,   black:false, l:l_white },
-    { key:8,  x0:33693/50000,  x1:74681/100000,  black:true,  l:l_black },
-    { key:9,  x0:75623/100000, x1:41459/50000,   black:false, l:l_white },
-    { key:10, x0:4193/5000,    x1:18231/20000,   black:true,  l:l_black },
-    { key:11, x0:92097/100000, x1:3106/3125,     black:false, l:l_white },
+  static k12 = [
+    { key:0,  x0:0,            x1:79027/1000000, black:false, l:Keyboard.l_white },
+    { key:1,  x0:1769/20000,   x1:807/5000,      black:true,  l:Keyboard.l_black },
+    { key:2,  x0:8541/50000,   x1:4997/20000,    black:false, l:Keyboard.l_white },
+    { key:3,  x0:25927/100000, x1:16611/50000,   black:true,  l:Keyboard.l_black },
+    { key:4,  x0:8541/25000,   x1:42067/100000,  black:false, l:Keyboard.l_white },
+    { key:5,  x0:1707/4000,    x1:4997/10000,    black:false, l:Keyboard.l_white },
+    { key:6,  x0:1591/3125,    x1:58207/100000,  black:true,  l:Keyboard.l_black },
+    { key:7,  x0:59149/100000, x1:16611/25000,   black:false, l:Keyboard.l_white },
+    { key:8,  x0:33693/50000,  x1:74681/100000,  black:true,  l:Keyboard.l_black },
+    { key:9,  x0:75623/100000, x1:41459/50000,   black:false, l:Keyboard.l_white },
+    { key:10, x0:4193/5000,    x1:18231/20000,   black:true,  l:Keyboard.l_black },
+    { key:11, x0:92097/100000, x1:3106/3125,     black:false, l:Keyboard.l_white },
   ];
 
   // 85 equally sized ranges that each contain exactly one key, and the key
   // thaty they contain, so we can check for being outside the edge
-  x_to_k12 = [
-    k12[1], k12[1], k12[1], k12[1], k12[1], k12[1], k12[1],
-    k12[2], k12[2], k12[2], k12[2], k12[2], k12[2], k12[2],
-    k12[3], k12[3], k12[3], k12[3], k12[3], k12[3], k12[3], k12[3],
-    k12[4], k12[4], k12[4], k12[4], k12[4], k12[4], k12[4],
-    k12[5], k12[5], k12[5], k12[5], k12[5], k12[5], k12[5],
-    k12[6], k12[6], k12[6], k12[6], k12[6], k12[6], k12[6],
-    k12[7], k12[7], k12[7], k12[7], k12[7], k12[7], k12[7],
-    k12[8], k12[8], k12[8], k12[8], k12[8], k12[8], k12[8],
-    k12[9], k12[9], k12[9], k12[9], k12[9], k12[9], k12[9],
-    k12[10], k12[10], k12[10], k12[10], k12[10], k12[10], k12[10],
-    k12[11], k12[11], k12[11], k12[11], k12[11], k12[11], k12[11],
-    k12[12], k12[12], k12[12], k12[12], k12[12], k12[12], k12[12],
+  static x_to_k12 = [
+    Keyboard.k12[0], Keyboard.k12[0], Keyboard.k12[0], Keyboard.k12[0], Keyboard.k12[0], Keyboard.k12[0], Keyboard.k12[0],
+    Keyboard.k12[1], Keyboard.k12[1], Keyboard.k12[1], Keyboard.k12[1], Keyboard.k12[1], Keyboard.k12[1], Keyboard.k12[1],
+    Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2],
+    Keyboard.k12[3], Keyboard.k12[3], Keyboard.k12[3], Keyboard.k12[3], Keyboard.k12[3], Keyboard.k12[3], Keyboard.k12[3],
+    Keyboard.k12[4], Keyboard.k12[4], Keyboard.k12[4], Keyboard.k12[4], Keyboard.k12[4], Keyboard.k12[4], Keyboard.k12[4],
+    Keyboard.k12[5], Keyboard.k12[5], Keyboard.k12[5], Keyboard.k12[5], Keyboard.k12[5], Keyboard.k12[5], Keyboard.k12[5],
+    Keyboard.k12[6], Keyboard.k12[6], Keyboard.k12[6], Keyboard.k12[6], Keyboard.k12[6], Keyboard.k12[6], Keyboard.k12[6],
+    Keyboard.k12[7], Keyboard.k12[7], Keyboard.k12[7], Keyboard.k12[7], Keyboard.k12[7], Keyboard.k12[7], Keyboard.k12[7],
+    Keyboard.k12[8], Keyboard.k12[8], Keyboard.k12[8], Keyboard.k12[8], Keyboard.k12[8], Keyboard.k12[8], Keyboard.k12[8],
+    Keyboard.k12[9], Keyboard.k12[9], Keyboard.k12[9], Keyboard.k12[9], Keyboard.k12[9], Keyboard.k12[9], Keyboard.k12[9],
+    Keyboard.k12[10], Keyboard.k12[10], Keyboard.k12[10], Keyboard.k12[10], Keyboard.k12[10], Keyboard.k12[10], Keyboard.k12[10],
+    Keyboard.k12[11], Keyboard.k12[11], Keyboard.k12[11], Keyboard.k12[11], Keyboard.k12[11], Keyboard.k12[11], Keyboard.k12[11],
   ];
 
   static makeFindKey(n_octaves) {
-    let octaves_width = n_octaves * octave_shift;
-    let full_width = octaves_width + w_white;
+    let octaves_width = n_octaves * Keyboard.octave_shift;
+    let full_width = octaves_width + Keyboard.w_white;
 
     function find_12_key(x, y, w, h) {
       if (x > octaves_width) {
         return 12 * n_octaves;
       }
 
-      let octave, kx = math.modf((x / w) * (full_width / octave_shift))
+      let octave, kx = math.modf((x / w) * (full_width / Keyboard.octave_shift))
       if (octave == n_octaves) {
         return 12 * octave;
       }
 
       let ki = math.floor(85 * kx);
-      let candidate = x_to_k12[ki + 1];
+      let candidate = Keyboard.x_to_k12[ki + 1];
       if (candidate == null)
         return null;
       
@@ -949,9 +867,9 @@ class Keyboard {
     }
 
     function find_7_key(x, w) {
-      let octave, kx = math.modf((x / w) * (full_width / octave_shift));
+      let octave, kx = math.modf((x / w) * (Keyboard.full_width / Keyboard.octave_shift));
       let ki, kkx = math.modf(7 * kx);
-      if (kkx <= f_white) {
+      if (kkx <= Keyboard.f_white) {
         if (ki < 3) {
           return 12 * octave + 2 * ki;
         } else {
@@ -973,7 +891,17 @@ class Keyboard {
     }
   }
 
-  constructor(x, y, w, h, keys) {
+  constructor(x, y, w, h, color) {
+    this.keys = {};
+
+    this.element = createElement("rect", {
+      x: x,
+      y: y,
+      width: w,
+      height: h,
+      rx: 2,
+      fill: color
+    });
     
     // Bind the gesture handlers to this instance.
     this.gestureStart = this.gestureStart.bind(this);
@@ -987,27 +915,31 @@ class Keyboard {
     //   console.log("Adding Pointer Event handlers");
     //   // Pointer events are supported, use those.
     //   // Add Pointer Event Listener
-    //   this.addEventListener('pointerdown', this.gestureStart, { capture: true, passive: false });
-    //   this.addEventListener('pointermove', this.gestureMove, { capture: true, passive: false });
-    //   this.addEventListener('pointerup', this.gestureEnd, { capture: true, passive: false });
-    //   this.addEventListener('pointercancel', this.gestureCancel, { capture: true, passive: false });
+    //   this.element.addEventListener('pointerdown', this.gestureStart, { capture: true, passive: false });
+    //   this.element.addEventListener('pointermove', this.gestureMove, { capture: true, passive: false });
+    //   this.element.addEventListener('pointerup', this.gestureEnd, { capture: true, passive: false });
+    //   this.element.addEventListener('pointercancel', this.gestureCancel, { capture: true, passive: false });
     // } else {
       console.log("Adding Touch and Mouse Event handlers");
       // Pointer events are _not_ supported, use touch and mouse events instead.
       // Add Touch Listener
-      this.addEventListener('touchstart', this.gestureStart, { capture: true, passive: false });
-      this.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
-      this.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
-      this.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
-      this.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
-      this.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
-      this.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
+      this.element.addEventListener('touchstart', this.gestureStart, { capture: true, passive: false });
+      this.element.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
+      this.element.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
+      this.element.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
+      this.element.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
+      this.element.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
+      this.element.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
 
-      // Add Mouse Listener
-      this.addEventListener('mousedown', this.gestureStart, { capture: true, passive: false });
+      // Add Mouse down Listener
+      this.element.addEventListener('mousedown', this.gestureStart, { capture: true, passive: false });
     // }
   }
 
+  addKey(key) {
+    this.keys[key.idx] = key;
+    this.element.appendChild(key.element);
+  }
 
   gestureStart(e) {
     console.log(`gestureStart(${e})`)
@@ -1373,9 +1305,9 @@ class Wheel extends Slideable {
 }
 
 class Connector {
-  constructor(serverUrl, keyboard, version) {
+  constructor(serverUrl, model, version) {
     this.serverUrl = serverUrl;
-    this.keyboard = keyboard;
+    this.model = model;
     this.version = version;
     this.reconnect = true;
 
@@ -1643,21 +1575,14 @@ class Connector {
   }
 
   addKeyboard(x, y, w, h, color) {
-    let rectangle = createElement("rect", {
-      x: x,
-      y: y,
-      width: w,
-      height: h,
-      rx: 2,
-      fill: color
-    });
-    this.decorationsContainer.appendChild(rectangle);
-    return rectangle;
+    this.keyboard = new Keyboard(x, y, w, h, color);
+    this.mainContainer.appendChild(this.keyboard.element);
+    return this.keyboard;
   }
 
-  addKey(x, y, w, h, keyNumber, black, path) {
-    let key = new Key(x, y, keyNumber, black, path)
-    this.mainContainer.appendChild(key.element);
+  addKey(x, y, w, h, idx, keyNumber, black, path) {
+    let key = new Key(this.keyboard, x, y, keyNumber, black, path)
+    this.keyboard.addKey(key);
     return key;
   }
 
@@ -1729,7 +1654,7 @@ class Connector {
     var oldDisplay = this.display;
     var oldLights = this.lights;
 
-    this.populate(this.keyboard, view);
+    this.populate(this.model, view);
 
     if (this.serverMessage != null) {
       this.showMessage(this.serverMessage);
@@ -1767,7 +1692,7 @@ class Connector {
     }
 
     // Note the current keyboard and view
-    this.keyboard = keyboard;
+    this.model = keyboard;
     this.view = view;
 
     console.log("Getting font size factors:");
@@ -2031,12 +1956,12 @@ class Connector {
     var parts = s.split(",");
     if (parts.length != 2) return;
 
-    var keyboard = parts[0];
+    var model = parts[0];
     var version = parseInt(parts[1]);
-    console.log(`Server information message '${s}' -> keyboard '${keyboard}' version '${version}'`);
+    console.log(`Server information message '${s}' -> model '${model}' version '${version}'`);
     if (version != this.version) {
       // we need to reload, forcing a refresh from the server.
-      // console.log(`keyboard '${keyboard}' vs '${this.keyboard}', version '${version}' vs '${this.version}', would reload`);
+      // console.log(`model '${model}' vs '${this.model}', version '${version}' vs '${this.version}', would reload`);
 
       // For debugging purposes:
       // If this goes into a loop of reloading over and over,
@@ -2044,10 +1969,10 @@ class Connector {
       // (which gets cleared by reloading the page).
       const reload_timeout = 0;
       setTimeout(function() { document.location.reload(true); }, reload_timeout); // immediately reload
-    } else if (keyboard != this.keyboard) {
+    } else if (model != this.model) {
       // we need to rebuild the panel, but can stay on the same software, no need to reload.
       console.log("Rebuilding the panel in place");
-      this.populate(keyboard, this.view);
+      this.populate(model, this.view);
       this.sendString("CA0B0L0D0"); // Send me nothing
       this.sendString("CA1B1L1D1"); // Send me analog data, buttons, and display data - ie refresh everything
     } else {
@@ -2223,7 +2148,7 @@ class Connector {
     this.addRectangle(235, 8, 245, 67.5, Colors.GLASS);
 
     this.displayContainer = createElement("svg");
-    this.display = new Display(this.displayContainer, 2, 40);
+    this.display = new Display(this.displayContainer, 2, 40, "real");
     this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.displayContainer.setAttribute("x", 247.0);
     this.displayContainer.setAttribute("y", 32.5093567251462);
@@ -3788,68 +3713,68 @@ class Connector {
     this.addRectangle(-55.5, 268.5, 41.5, 1.2, this.accentColor);
     this.addUse("L_B_mod", -55.5, 263.37737);
     // Ending group 'WheelArea'
-    this.addKeyboard(0.0, 153.5, 845.0, 138, Colors.KEYBOARD_BACKGROUND)
-    this.addKey(0, 153.5, 22.5, 138, 36, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
-    this.addKey(14.55, 153.5, 12, 88, 37, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(23.5, 153.5, 22.5, 138, 38, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
-    this.addKey(42.65, 153.5, 12, 88, 39, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(47, 153.5, 22.5, 138, 40, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(70.5, 153.5, 22.5, 138, 41, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
-    this.addKey(83.75, 153.5, 12, 88, 42, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(94, 153.5, 22.5, 138, 43, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
-    this.addKey(110.85, 153.5, 12, 88, 44, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(117.5, 153.5, 22.5, 138, 45, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
-    this.addKey(137.95, 153.5, 12, 88, 46, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(141, 153.5, 22.5, 138, 47, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(164.5, 153.5, 22.5, 138, 48, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
-    this.addKey(179.05, 153.5, 12, 88, 49, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(188, 153.5, 22.5, 138, 50, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
-    this.addKey(207.15, 153.5, 12, 88, 51, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(211.5, 153.5, 22.5, 138, 52, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(235, 153.5, 22.5, 138, 53, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
-    this.addKey(248.25, 153.5, 12, 88, 54, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(258.5, 153.5, 22.5, 138, 55, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
-    this.addKey(275.35, 153.5, 12, 88, 56, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(282, 153.5, 22.5, 138, 57, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
-    this.addKey(302.45, 153.5, 12, 88, 58, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(305.5, 153.5, 22.5, 138, 59, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(329, 153.5, 22.5, 138, 60, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
-    this.addKey(343.55, 153.5, 12, 88, 61, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(352.5, 153.5, 22.5, 138, 62, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
-    this.addKey(371.65, 153.5, 12, 88, 63, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(376, 153.5, 22.5, 138, 64, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(399.5, 153.5, 22.5, 138, 65, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
-    this.addKey(412.75, 153.5, 12, 88, 66, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(423, 153.5, 22.5, 138, 67, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
-    this.addKey(439.85, 153.5, 12, 88, 68, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(446.5, 153.5, 22.5, 138, 69, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
-    this.addKey(466.95, 153.5, 12, 88, 70, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(470, 153.5, 22.5, 138, 71, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(493.5, 153.5, 22.5, 138, 72, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
-    this.addKey(508.05, 153.5, 12, 88, 73, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(517, 153.5, 22.5, 138, 74, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
-    this.addKey(536.15, 153.5, 12, 88, 75, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(540.5, 153.5, 22.5, 138, 76, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(564, 153.5, 22.5, 138, 77, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
-    this.addKey(577.25, 153.5, 12, 88, 78, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(587.5, 153.5, 22.5, 138, 79, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
-    this.addKey(604.35, 153.5, 12, 88, 80, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(611, 153.5, 22.5, 138, 81, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
-    this.addKey(631.45, 153.5, 12, 88, 82, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(634.5, 153.5, 22.5, 138, 83, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(658, 153.5, 22.5, 138, 84, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
-    this.addKey(672.55, 153.5, 12, 88, 85, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(681.5, 153.5, 22.5, 138, 86, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
-    this.addKey(700.65, 153.5, 12, 88, 87, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(705, 153.5, 22.5, 138, 88, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(728.5, 153.5, 22.5, 138, 89, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
-    this.addKey(741.75, 153.5, 12, 88, 90, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(752, 153.5, 22.5, 138, 91, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
-    this.addKey(768.85, 153.5, 12, 88, 92, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(775.5, 153.5, 22.5, 138, 93, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
-    this.addKey(795.95, 153.5, 12, 88, 94, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(799, 153.5, 22.5, 138, 95, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(822.5, 153.5, 22.5, 138, 96, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.keyboard = this.addKeyboard(0.0, 153.5, 845.0, 138, Colors.KEYBOARD_BACKGROUND)
+    this.addKey(0, 153.5, 22.5, 138, 0, 36, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
+    this.addKey(14.55, 153.5, 12, 88, 1, 37, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(23.5, 153.5, 22.5, 138, 2, 38, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
+    this.addKey(42.65, 153.5, 12, 88, 3, 39, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(47, 153.5, 22.5, 138, 4, 40, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(70.5, 153.5, 22.5, 138, 5, 41, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
+    this.addKey(83.75, 153.5, 12, 88, 6, 42, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(94, 153.5, 22.5, 138, 7, 43, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
+    this.addKey(110.85, 153.5, 12, 88, 8, 44, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(117.5, 153.5, 22.5, 138, 9, 45, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
+    this.addKey(137.95, 153.5, 12, 88, 10, 46, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(141, 153.5, 22.5, 138, 11, 47, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(164.5, 153.5, 22.5, 138, 12, 48, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
+    this.addKey(179.05, 153.5, 12, 88, 13, 49, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(188, 153.5, 22.5, 138, 14, 50, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
+    this.addKey(207.15, 153.5, 12, 88, 15, 51, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(211.5, 153.5, 22.5, 138, 16, 52, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(235, 153.5, 22.5, 138, 17, 53, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
+    this.addKey(248.25, 153.5, 12, 88, 18, 54, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(258.5, 153.5, 22.5, 138, 19, 55, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
+    this.addKey(275.35, 153.5, 12, 88, 20, 56, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(282, 153.5, 22.5, 138, 21, 57, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
+    this.addKey(302.45, 153.5, 12, 88, 22, 58, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(305.5, 153.5, 22.5, 138, 23, 59, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(329, 153.5, 22.5, 138, 24, 60, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
+    this.addKey(343.55, 153.5, 12, 88, 25, 61, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(352.5, 153.5, 22.5, 138, 26, 62, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
+    this.addKey(371.65, 153.5, 12, 88, 27, 63, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(376, 153.5, 22.5, 138, 28, 64, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(399.5, 153.5, 22.5, 138, 29, 65, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
+    this.addKey(412.75, 153.5, 12, 88, 30, 66, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(423, 153.5, 22.5, 138, 31, 67, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
+    this.addKey(439.85, 153.5, 12, 88, 32, 68, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(446.5, 153.5, 22.5, 138, 33, 69, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
+    this.addKey(466.95, 153.5, 12, 88, 34, 70, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(470, 153.5, 22.5, 138, 35, 71, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(493.5, 153.5, 22.5, 138, 36, 72, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
+    this.addKey(508.05, 153.5, 12, 88, 37, 73, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(517, 153.5, 22.5, 138, 38, 74, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
+    this.addKey(536.15, 153.5, 12, 88, 39, 75, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(540.5, 153.5, 22.5, 138, 40, 76, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(564, 153.5, 22.5, 138, 41, 77, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
+    this.addKey(577.25, 153.5, 12, 88, 42, 78, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(587.5, 153.5, 22.5, 138, 43, 79, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
+    this.addKey(604.35, 153.5, 12, 88, 44, 80, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(611, 153.5, 22.5, 138, 45, 81, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
+    this.addKey(631.45, 153.5, 12, 88, 46, 82, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(634.5, 153.5, 22.5, 138, 47, 83, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(658, 153.5, 22.5, 138, 48, 84, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
+    this.addKey(672.55, 153.5, 12, 88, 49, 85, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(681.5, 153.5, 22.5, 138, 50, 86, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
+    this.addKey(700.65, 153.5, 12, 88, 51, 87, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(705, 153.5, 22.5, 138, 52, 88, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(728.5, 153.5, 22.5, 138, 53, 89, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
+    this.addKey(741.75, 153.5, 12, 88, 54, 90, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(752, 153.5, 22.5, 138, 55, 91, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
+    this.addKey(768.85, 153.5, 12, 88, 56, 92, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(775.5, 153.5, 22.5, 138, 57, 93, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
+    this.addKey(795.95, 153.5, 12, 88, 58, 94, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(799, 153.5, 22.5, 138, 59, 95, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(822.5, 153.5, 22.5, 138, 60, 96, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
     this.addEllipse(2, 129.5, 6, 6, Colors.SCREWHEAD);
     this.addEllipse(837, 129.5, 6, 6, Colors.SCREWHEAD);
     this.root.setAttribute("x", "0mm");
@@ -3903,7 +3828,7 @@ class Connector {
     this.addRectangle(25, -5, 245, 67.5, Colors.GLASS);
 
     this.displayContainer = createElement("svg");
-    this.display = new Display(this.displayContainer, 2, 40);
+    this.display = new Display(this.displayContainer, 2, 40, "real");
     this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.displayContainer.setAttribute("x", 37.0);
     this.displayContainer.setAttribute("y", 19.509356725146198);
@@ -4312,44 +4237,44 @@ class Connector {
     this.addRectangle(-42, 226.2, 33, 1.2, this.accentColor);
     this.addUse("L_B_mod", -42, 221.07737);
     // Ending group 'NarrowWheelArea'
-    this.addKeyboard(-9.0, 117.56511627906974, 492.20000000000005, 131.63488372093025, Colors.KEYBOARD_BACKGROUND)
-    this.addKey(-9, 117.56512, 22.5, 138, 48, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
-    this.addKey(5.55, 117.56512, 12, 88, 49, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(14.5, 117.56512, 22.5, 138, 50, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
-    this.addKey(33.65, 117.56512, 12, 88, 51, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(38, 117.56512, 22.5, 138, 52, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(61.5, 117.56512, 22.5, 138, 53, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
-    this.addKey(74.75, 117.56512, 12, 88, 54, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(85, 117.56512, 22.5, 138, 55, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
-    this.addKey(101.85, 117.56512, 12, 88, 56, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(108.5, 117.56512, 22.5, 138, 57, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
-    this.addKey(128.95, 117.56512, 12, 88, 58, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(132, 117.56512, 22.5, 138, 59, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(155.5, 117.56512, 22.5, 138, 60, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
-    this.addKey(170.05, 117.56512, 12, 88, 61, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(179, 117.56512, 22.5, 138, 62, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
-    this.addKey(198.15, 117.56512, 12, 88, 63, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(202.5, 117.56512, 22.5, 138, 64, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(226, 117.56512, 22.5, 138, 65, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
-    this.addKey(239.25, 117.56512, 12, 88, 66, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(249.5, 117.56512, 22.5, 138, 67, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
-    this.addKey(266.35, 117.56512, 12, 88, 68, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(273, 117.56512, 22.5, 138, 69, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
-    this.addKey(293.45, 117.56512, 12, 88, 70, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(296.5, 117.56512, 22.5, 138, 71, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(320, 117.56512, 22.5, 138, 72, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
-    this.addKey(334.55, 117.56512, 12, 88, 73, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(343.5, 117.56512, 22.5, 138, 74, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
-    this.addKey(362.65, 117.56512, 12, 88, 75, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(367, 117.56512, 22.5, 138, 76, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(390.5, 117.56512, 22.5, 138, 77, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
-    this.addKey(403.75, 117.56512, 12, 88, 78, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(414, 117.56512, 22.5, 138, 79, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
-    this.addKey(430.85, 117.56512, 12, 88, 80, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(437.5, 117.56512, 22.5, 138, 81, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
-    this.addKey(457.95, 117.56512, 12, 88, 82, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
-    this.addKey(461, 117.56512, 22.5, 138, 83, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
-    this.addKey(484.5, 117.56512, 22.5, 138, 84, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.keyboard = this.addKeyboard(-9.0, 117.56511627906974, 492.20000000000005, 131.63488372093025, Colors.KEYBOARD_BACKGROUND)
+    this.addKey(-9, 117.56512, 22.5, 138, 0, 48, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
+    this.addKey(5.55, 117.56512, 12, 88, 1, 49, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(14.5, 117.56512, 22.5, 138, 2, 50, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
+    this.addKey(33.65, 117.56512, 12, 88, 3, 51, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(38, 117.56512, 22.5, 138, 4, 52, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(61.5, 117.56512, 22.5, 138, 5, 53, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
+    this.addKey(74.75, 117.56512, 12, 88, 6, 54, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(85, 117.56512, 22.5, 138, 7, 55, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
+    this.addKey(101.85, 117.56512, 12, 88, 8, 56, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(108.5, 117.56512, 22.5, 138, 9, 57, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
+    this.addKey(128.95, 117.56512, 12, 88, 10, 58, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(132, 117.56512, 22.5, 138, 11, 59, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(155.5, 117.56512, 22.5, 138, 12, 60, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
+    this.addKey(170.05, 117.56512, 12, 88, 13, 61, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(179, 117.56512, 22.5, 138, 14, 62, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
+    this.addKey(198.15, 117.56512, 12, 88, 15, 63, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(202.5, 117.56512, 22.5, 138, 16, 64, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(226, 117.56512, 22.5, 138, 17, 65, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
+    this.addKey(239.25, 117.56512, 12, 88, 18, 66, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(249.5, 117.56512, 22.5, 138, 19, 67, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
+    this.addKey(266.35, 117.56512, 12, 88, 20, 68, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(273, 117.56512, 22.5, 138, 21, 69, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
+    this.addKey(293.45, 117.56512, 12, 88, 22, 70, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(296.5, 117.56512, 22.5, 138, 23, 71, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(320, 117.56512, 22.5, 138, 24, 72, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 13 V 0 Z");
+    this.addKey(334.55, 117.56512, 12, 88, 25, 73, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(343.5, 117.56512, 22.5, 138, 26, 74, false, "M 4.6 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 17.6 V 0 Z");
+    this.addKey(362.65, 117.56512, 12, 88, 27, 75, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(367, 117.56512, 22.5, 138, 28, 76, false, "M 9.2 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(390.5, 117.56512, 22.5, 138, 29, 77, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 11.7 V 0 Z");
+    this.addKey(403.75, 117.56512, 12, 88, 30, 78, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(414, 117.56512, 22.5, 138, 31, 79, false, "M 3.3 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 15.3 V 0 Z");
+    this.addKey(430.85, 117.56512, 12, 88, 32, 80, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(437.5, 117.56512, 22.5, 138, 33, 81, false, "M 6.9 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 90 H 18.9 V 0 Z");
+    this.addKey(457.95, 117.56512, 12, 88, 34, 82, true, "M 0 0 V 87 a 1 1 0 0 0 1 1 h 10 a 1 1 0 0 0 1 -1 V 0  Z");
+    this.addKey(461, 117.56512, 22.5, 138, 35, 83, false, "M 10.5 0 V 90 H 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
+    this.addKey(484.5, 117.56512, 22.5, 138, 36, 84, false, "M 0 0 V 137 a 1 1 0 0 0 1 1 h 20.5 a 1 1 0 0 0 1 -1 V 0 Z");
     this.root.setAttribute("x", "0mm");
     this.root.setAttribute("y", "0mm");
     this.root.setAttribute("width", "578.2mm");
@@ -4401,7 +4326,7 @@ class Connector {
     this.addRectangle(25, -5, 245, 67.5, Colors.GLASS);
 
     this.displayContainer = createElement("svg");
-    this.display = new Display(this.displayContainer, 2, 40);
+    this.display = new Display(this.displayContainer, 2, 40, "real");
     this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.displayContainer.setAttribute("x", 37.0);
     this.displayContainer.setAttribute("y", 19.509356725146198);
@@ -4782,7 +4707,7 @@ class Connector {
     this.addRectangle(30, -5, 245, 67.5, Colors.GLASS);
 
     this.displayContainer = createElement("svg");
-    this.display = new Display(this.displayContainer, 2, 40);
+    this.display = new Display(this.displayContainer, 2, 40, "real");
     this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.displayContainer.setAttribute("x", 42.0);
     this.displayContainer.setAttribute("y", 19.509356725146198);

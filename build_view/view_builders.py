@@ -6,7 +6,7 @@ from util import *
 from view import *
 from keys import *
 from typing import cast
-from render_harfbuzz import TextRenderer
+from render import make_text_renderer
 
 # The pitch-bend and modulation wheels are approxi  mately:
 # r = 40mm
@@ -101,7 +101,7 @@ class ViewBuilder:
   contexts: list[Context] = field(default_factory=list)
 
   def __post_init__(self):
-    self.text_renderer = TextRenderer()
+    self.text_renderer = make_text_renderer()
     self.button_font = self.text_renderer.getFont('Panel', italic=True).scaledToTextHeight(3.6)
     self.back_panel_font = self.button_font
     self.small_font = self.text_renderer.getFont('Panel', bold=True).scaledToAscent(2.5)

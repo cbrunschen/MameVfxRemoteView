@@ -21,7 +21,7 @@ def flip_path(path):
 
 
 # The font used by the VFX family on the NEC FIP80B5R display, including 
-# VFX-family-specific characters sich as digits followed by a period / decimal point.
+# VFX-family-specific characters such as digits followed by a period / decimal point.
 # 
 # The segments are numbered in order of the pins 58 .. 73 that drive
 # the top row of character segments, as shown on a scan of the Ensoniq ESQ1
@@ -243,7 +243,7 @@ vfx_chars = [
 	"DEL"
 ]
 
-# Swizzle the low order 14 bits from
+# Swizzle the low order 15 bits from
 #      ==== 0 ====
 #     |\    |    /|
 #     | \   |   / |
@@ -260,7 +260,7 @@ vfx_chars = [
 # 
 #      ==== 15 ===
 # 
-# to MAME 
+# to 
 # 
 #      ==== 0 ====
 #     |\    |    /|
@@ -305,14 +305,19 @@ led14seg_from_fip80b5r_indexes = [
    15 # underline bit is not part of any character.
 ]
 
-def swizzle(v):
+# Slow, but fast enough
+fip80b5r_from_led14seg_indexes = [
+  led14seg_from_fip80b5r_indexes.index(i) for i in range(len(led14seg_from_fip80b5r_indexes))
+]
+
+def swizzle(v, indexes = led14seg_from_fip80b5r_indexes):
   result = 0;
   for i in range(16):
-    source = led14seg_from_fip80b5r_indexes[i];
+    source = indexes[i];
     result |= IS_SET(v, source) << i
   return result
 
-font_led14seg = [ swizzle(v) for v in font_fip80b5r ]
+font_led14seg = [ swizzle(v, led14seg_from_fip80b5r_indexes) for v in font_fip80b5r ]
 
 def nybble(b):
   return ''.join([f"{'1' if IS_SET(b, 3 - i) else '0'}" for i in range(4)])

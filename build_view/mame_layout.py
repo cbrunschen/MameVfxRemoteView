@@ -4,12 +4,11 @@ from dataclasses import dataclass, field
 from math import tan, radians
 from rect import *
 from view import *
-from view_builders import ViewBuilder
 from myxml import *
 from mysvg import *
-from colors import Color, get_color, color_name
 from vfd import segment_paths_led14seg_order
-from render_harfbuzz import TextRenderer
+from straight_segments import straight_segment_paths_led14seg
+from render import make_text_renderer
 
 @dataclass
 class MameLayoutDestination:
@@ -39,17 +38,18 @@ class MameLayoutDestination:
     return result
 
 class MameLayoutVisitor(ViewVisitor):
-  def __init__(self, keyboard: str, io: str = '', 
+  def __init__(self, 
+               keyboard: str, io: str = '', 
                fonts: bool = False, 
                hexcolors: bool = False,
                text_paths: bool = False,
-               segment_paths: bool = False):
+               segments: str = 'default'):
     self.io = io
     self.fonts = fonts
     self.hexcolors = hexcolors
     self.text_paths = text_paths
-    self.text_renderer = TextRenderer()
-    self.segment_paths = segment_paths
+    self.text_renderer = make_text_renderer()
+    self.segments = segments
 
     self.keyboard = keyboard
     self.conditions = {
@@ -123,13 +123,33 @@ class MameLayoutVisitor(ViewVisitor):
     ]}
 
     vfd_definitions = []
-    if self.segment_paths:
+    if self.segments == 'default':
+      vfd_definitions.extend([
+        self.layout_element(name='segments', defstate='0', contents=[
+          self.layout_tag('led14seg', color='vfd_on')
+        ]),
+        self.layout_element(name='dot', defstate='0', contents=[
+          self.layout_tag('disk', statemask='0x4000', state='0', color='vfd_off'),
+          self.layout_tag('disk', statemask='0x4000', state='0x4000', color='vfd_on')
+        ]),
+        self.layout_element(name='underline', defstate='0', contents=[
+          self.layout_rect(statemask='0x8000', state='0', color='vfd_off'),
+          self.layout_rect(statemask='0x8000', state='0x8000', color='vfd_on')
+        ]),
+        self.layout_group(name='vfd_cell', bounds=Rect(0, 0, 342, 572), contents=[
+          self.layout_element(ref='segments', name='~input~', bounds=Rect(50, 69, 214, 311)),
+          self.layout_element(ref='dot', name='~input~', bounds=Rect(253, 337, 42, 42)),
+          self.layout_element(ref='underline', name='~input~', bounds=Rect(43, 444, 183, 25)),
+        ]),
+      ])
+    else:
+      segs = straight_segment_paths_led14seg if segments == 'straight' else segment_paths_led14seg_order
       def seg(i, color, statemask, state):
         return self.layout_svg_image(
           str(SVGDrawing(
             bounds, 
             f'segment{i}', 
-            {'path': SVGPath(segment_paths_led14seg_order[i])}
+            {'path': SVGPath(segs[i])}
           ).toSvgElement()),
           bounds=bounds,
           color=color,
@@ -150,26 +170,7 @@ class MameLayoutVisitor(ViewVisitor):
           self.layout_element(ref=f'segment{i}', name='~input~', bounds=bounds) for i in range(16)
         ]),
       ])
-    else:
-      vfd_definitions.extend([
-        self.layout_element(name='segments', defstate='0', contents=[
-          self.layout_tag('led14seg', color='vfd_on')
-        ]),
-        self.layout_element(name='dot', defstate='0', contents=[
-          self.layout_tag('disk', statemask='0x4000', state='0', color='vfd_off'),
-          self.layout_tag('disk', statemask='0x4000', state='0x4000', color='vfd_on')
-        ]),
-        self.layout_element(name='underline', defstate='0', contents=[
-          self.layout_rect(statemask='0x8000', state='0', color='vfd_off'),
-          self.layout_rect(statemask='0x8000', state='0x8000', color='vfd_on')
-        ]),
-        self.layout_group(name='vfd_cell', bounds=Rect(0, 0, 342, 572), contents=[
-          self.layout_element(ref='segments', name='~input~', bounds=Rect(50, 69, 214, 311)),
-          self.layout_element(ref='dot', name='~input~', bounds=Rect(253, 337, 42, 42)),
-          self.layout_element(ref='underline', name='~input~', bounds=Rect(43, 444, 183, 25)),
-        ]),
-      ])
-      
+        
     vfd_definitions.extend([
       self.layout_element(name='vfd_background', contents=[
         self.layout_rect(color='black')

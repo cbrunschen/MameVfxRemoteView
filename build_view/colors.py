@@ -32,7 +32,7 @@ class Color:
 
     colors.append(self)
 
-    dprint(f"Creating color '{self.name}' with hex {self._hex}, rgb {self._rgb}")
+    # dprint(f"Creating color '{self.name}' with hex {self._hex}, rgb {self._rgb}")
 
     colors_by_name[self.name] = self
     if primary and self._hex is not None:

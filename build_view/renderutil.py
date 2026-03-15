@@ -129,113 +129,6 @@ class Cubic:
 
 
 
-class SVGPathParser:
-  """Bezier paths only (no arcs)"""
-
-  MOVE_TO = 'M'
-  R_MOVE_TO = 'm'
-  LINE_TO = 'L'
-  R_LINE_TO = 'l'
-  CURVE_TO = 'C'
-  R_CURVE_TO = 'c'
-  QUAD_TO = 'Q'
-  R_QUAD_TO = 'q'
-  CLOSE = 'Z'
-  R_CLOSE = 'z'
-
-  CMDS = {
-    MOVE_TO,
-    LINE_TO,
-    R_LINE_TO,
-    CURVE_TO,
-    R_CURVE_TO,
-    QUAD_TO,
-    R_QUAD_TO,
-    CLOSE,
-    R_CLOSE,
-  }
-
-  match_cmd = re.compile(r'\s*([MmLlCcQqZz])')
-  match_num = re.compile(r'\s*,?\s*([+-]?\d*\.?\d*([eE][+-]?\d+)?)')
-
-  @staticmethod
-  def parts(s):
-    while len(s) > 0:
-      if match := SVGPathParser.match_cmd.match(s):
-        s = s[match.end():]
-        dprint(f'cmd {match}, remaining={s}')
-        yield match.group(1) 
-      if match := SVGPathParser.match_num.match(s):
-        if len(match.group()) > 0:
-          s = s[match.end():]
-          dprint(f'num {match} with groups {match.groups()}, remaining={s}')
-          v = float(match.group(1))
-          fractional, integral = modf(v)
-          if fractional == 0.0:
-            dprint(f'- {v} represents an integer, {fractional=}')
-            yield int(integral)
-          else:
-            dprint(f'- {v} is a float, {fractional=}')
-            yield v
-
-  @staticmethod  
-  def want(cmd):
-    relative = cmd.islower()
-    cmd = cmd.lower()
-    if cmd == 'm' or cmd == 'l':
-      return (1, cmd, relative)
-    elif cmd == 'q':
-      return (2, cmd, relative)
-    elif cmd == 'c':
-      return (3, cmd, relative)
-    elif cmd == 'z':
-      return (0, cmd, relative)
-    else:
-      return (-1, None, False)
-  
-
-  @staticmethod
-  def parse(s):
-    s = s.strip()
-    parts = list(SVGPathParser.parts(s))
-
-    cmd = parts[0]
-    n_points, cmd, relative = SVGPathParser.want(cmd)
-    parts = parts[1:]
-    
-    while cmd is not None and len(parts) > 0:
-      if parts[0] in SVGPathParser.CMDS:
-        cmd = parts[0]
-        n_points, cmd, relative = SVGPathParser.want(cmd)
-        parts = parts[1:]
-        
-      if n_points < 0:
-        raise ValueError
-
-      points = list()
-      for _ in range(n_points):
-        if isinstance(parts[0], (int, float)) and isinstance(parts[1], (int, float)):
-          points.append((parts[0], parts[1]))
-          parts = parts[2:]
-        else:
-          raise ValueError
-
-      if cmd == 'm':
-        print(f'Move {relative=} {points}')
-        # the next command after a move is a line.
-        cmd = 'l'
-      elif cmd == 'l':
-        print(f'Line {relative=} {points}')
-      elif cmd == 'q':
-        print(f'Quad {relative=} {points}')
-      elif cmd == 'c':
-        print(f'Cubic {relative=} {points}')
-      elif cmd == 'z':
-        print(f'Close {relative=} {points}')
-      else:
-        raise ValueError
-
-
 def ti(v):
   if abs(v % 1.0) < (1.0 / (1024 * 1024)):
     return int(v)
@@ -248,10 +141,10 @@ class Path:
     def end(self) -> tuple[int|float, int|float]:
       return (0,0)
     
-    def a(self, v:int|float, sv:float, dv:float):
+    def ab(self, v:int|float, sv:float, dv:float):
       return ti(dv + sv * v)
 
-    def r(self, v:int|float, pv:int|float, sv:float):
+    def rl(self, v:int|float, pv:int|float, sv:float):
       return ti(sv * (v - pv))
 
     def tf(self, sx:float, sy:float, dx:float, dy:float):
@@ -270,10 +163,10 @@ class Path:
       return (self.x, self.y)
     
     def tf(self, sx:float, sy:float, dx:float, dy:float):
-      return Path.MoveTo(self.a(self.x,sx,dx), self.a(self.y,sy,dy))
+      return Path.MoveTo(self.ab(self.x,sx,dx), self.ab(self.y,sy,dy))
 
     def svg(self, prev, sx:float=1, sy:float=1, dx:float=0, dy:float=0):
-      return f'M{self.a(self.x,sx,dx)},{self.a(self.y,sy,dy)}'
+      return f'M{self.ab(self.x,sx,dx)},{self.ab(self.y,sy,dy)}'
 
 
   @dataclass
@@ -285,11 +178,11 @@ class Path:
       return (self.x, self.y)
     
     def tf(self, sx:float, sy:float, dx:float, dy:float):
-      return Path.LineTo(self.a(self.x,sx,dx), self.a(self.y,sy,dy))
+      return Path.LineTo(self.ab(self.x,sx,dx), self.ab(self.y,sy,dy))
 
     def svg(self, prev, sx:float=1, sy:float=1, dx:float=0, dy:float=0):
       px, py = prev.end()
-      return f'l{self.r(self.x,px,sx)},{self.r(self.y,py,sy)}'
+      return f'l{self.rl(self.x,px,sx)},{self.rl(self.y,py,sy)}'
     
     
   @dataclass
@@ -303,15 +196,15 @@ class Path:
       return (self.x2, self.y2)
 
     def tf(self, sx:float, sy:float, dx:float, dy:float):
-      return Path.QuadTo(self.a(self.x1,sx,dx), self.a(self.y1,sy,dy),
-                         self.a(self.x2,sx,dx), self.a(self.y2,sy,dy))
+      return Path.QuadTo(self.ab(self.x1,sx,dx), self.ab(self.y1,sy,dy),
+                         self.ab(self.x2,sx,dx), self.ab(self.y2,sy,dy))
 
     def svg(self, prev, sx:float=1, sy:float=1, dx:float=0, dy:float=0):
       px, py = prev.end()
       dprint(f'QuadTo.svg(): [{px},{py}], ({self.x1},{self.y1}), ({self.x2},{self.y2})')
       dprint(f'    {sx=},{sy=}; {dx=},{dy=}')
-      dprint(f' -> {self.r(self.x1,px,sx)},{self.r(self.y1,py,sy)} {self.r(self.x2,px,sx)},{self.r(self.y2,py,sy)}')
-      return f'q{self.r(self.x1,px,sx)},{self.r(self.y1,py,sy)} {self.r(self.x2,px,sx)},{self.r(self.y2,py,sy)}'
+      dprint(f' -> {self.rl(self.x1,px,sx)},{self.rl(self.y1,py,sy)} {self.rl(self.x2,px,sx)},{self.rl(self.y2,py,sy)}')
+      return f'q{self.rl(self.x1,px,sx)},{self.rl(self.y1,py,sy)} {self.rl(self.x2,px,sx)},{self.rl(self.y2,py,sy)}'
 
 
   @dataclass
@@ -327,13 +220,13 @@ class Path:
       return (self.x3, self.y3)
 
     def tf(self, sx:float, sy:float, dx:float, dy:float):
-      return Path.CubicTo(self.a(self.x1,sx,dx), self.a(self.y1,sy,dy),
-                          self.a(self.x2,sx,dx), self.a(self.y2,sy,dy),
-                          self.a(self.x3,sx,dx), self.a(self.y3,sy,dy))
+      return Path.CubicTo(self.ab(self.x1,sx,dx), self.ab(self.y1,sy,dy),
+                          self.ab(self.x2,sx,dx), self.ab(self.y2,sy,dy),
+                          self.ab(self.x3,sx,dx), self.ab(self.y3,sy,dy))
 
     def svg(self, prev, sx:float=1, sy:float=1, dx:float=0, dy:float=0):
       px, py = prev.end()
-      return f'q{self.r(self.x1,px,sx)},{self.r(self.y1,py,sy)} {self.r(self.x2,px,sx)},{self.r(self.y2,py,sy)} {self.r(self.x3,px,sx)},{self.r(self.y3,py,sy)}'
+      return f'q{self.rl(self.x1,px,sx)},{self.rl(self.y1,py,sy)} {self.rl(self.x2,px,sx)},{self.rl(self.y2,py,sy)} {self.rl(self.x3,px,sx)},{self.rl(self.y3,py,sy)}'
 
 
   @dataclass
@@ -572,3 +465,118 @@ class Metrics:
 
   def scaledToAscent(self, ascent):
     return self.scaledTo('ascent', ascent)
+
+
+class SVGPathParser:
+  MOVE_TO = 'M'
+  R_MOVE_TO = 'm'
+  LINE_TO = 'L'
+  R_LINE_TO = 'l'
+  CURVE_TO = 'C'
+  R_CURVE_TO = 'c'
+  QUAD_TO = 'Q'
+  R_QUAD_TO = 'q'
+  ARC = 'A'
+  R_ARC = 'a'
+  CLOSE = 'Z'
+  R_CLOSE = 'z'
+
+  CMDS = {
+    MOVE_TO,
+    LINE_TO,
+    R_LINE_TO,
+    CURVE_TO,
+    R_CURVE_TO,
+    QUAD_TO,
+    R_QUAD_TO,
+    ARC,
+    R_ARC,
+    CLOSE,
+    R_CLOSE,
+  }
+
+  match_cmd = re.compile(r'\s*([MmLlCcQqAaZz])')
+  match_num = re.compile(r'\s*,?\s*([+-]?\d*\.?\d*([eE][+-]?\d+)?)')
+
+  @staticmethod
+  def parts(s):
+    while len(s) > 0:
+      if match := SVGPathParser.match_cmd.match(s):
+        s = s[match.end():]
+        dprint(f'cmd {match}, remaining={s}')
+        yield match.group(1) 
+      if match := SVGPathParser.match_num.match(s):
+        if len(match.group()) > 0:
+          s = s[match.end():]
+          dprint(f'num {match} with groups {match.groups()}, remaining={s}')
+          v = float(match.group(1))
+          fractional, integral = modf(v)
+          if fractional == 0.0:
+            dprint(f'- {v} represents an integer, {fractional=}')
+            yield int(integral)
+          else:
+            dprint(f'- {v} is a float, {fractional=}')
+            yield v
+
+  @staticmethod  
+  def want(cmd):
+    relative = cmd.islower()
+    cmd = cmd.lower()
+    if cmd == 'm' or cmd == 'l':
+      return (2, cmd, relative)
+    elif cmd == 'q':
+      return (4, cmd, relative)
+    elif cmd == 'c':
+      return (6, cmd, relative)
+    elif cmd == 'a':
+      return (7, cmd, relative)
+    elif cmd == 'z':
+      return (0, cmd, relative)
+    else:
+      return (-1, None, False)
+  
+
+  @staticmethod
+  def parse(s):
+    cx, cy = 0.0, 0.0
+
+    builder = PathBuilder()
+    
+    s = s.strip()
+    parts = list(SVGPathParser.parts(s))
+
+    cmd = parts[0]
+    n_values, cmd, relative = SVGPathParser.want(cmd)
+    parts = parts[1:]
+    
+    while cmd is not None and len(parts) > 0:
+      if parts[0] in SVGPathParser.CMDS:
+        cmd = parts[0]
+        n_values, cmd, relative = SVGPathParser.want(cmd)
+        parts = parts[1:]
+        
+      if n_values < 0:
+        raise ValueError
+
+      values = list()
+      for _ in range(n_values):
+        if isinstance(parts[0], (int, float)):
+          values.append(parts[0])
+          parts = parts[1:]
+        else:
+          raise ValueError
+
+      if cmd == 'm':
+        print(f'Move {relative=} {values}')
+        # the next command after a move is a line.
+        cmd = 'l'
+      elif cmd == 'l':
+        print(f'Line {relative=} {values}')
+      elif cmd == 'q':
+        print(f'Quad {relative=} {values}')
+      elif cmd == 'c':
+        print(f'Cubic {relative=} {values}')
+      elif cmd == 'z':
+        print(f'Close {relative=} {values}')
+      else:
+        raise ValueError

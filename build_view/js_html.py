@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from colors import colors
 from view import *
 from util import fnum
-from render_harfbuzz import TextRenderer
+from render import make_text_renderer
 
 @dataclass
 class HTMLJSView:
@@ -16,14 +16,16 @@ class HTMLJSVisitor(ViewVisitor):
 
   def __init__(
       self,
-      text_paths: bool = False
+      text_paths: bool = False,
+      segments: str = 'real'
     ):
     self.text_paths = text_paths
+    self.segments = segments if segments in {'real','straight'} else 'straight'
     self.indent = '    '
     self.defs: dict[str, str] = {}
     self.views: list[HTMLJSView] = []
     self.offset: Vector = Vector(0, 0)
-    self.text_renderer = TextRenderer()
+    self.text_renderer = make_text_renderer()
 
   
   @property
@@ -92,7 +94,7 @@ class HTMLJSVisitor(ViewVisitor):
     bounds = display.bounds + self.offset
     self.append(dedent(f'''
       this.displayContainer = createElement("svg");
-      this.display = new Display(this.displayContainer, 2, 40);
+      this.display = new Display(this.displayContainer, 2, 40, "{self.segments}");
       this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
       this.displayContainer.setAttribute("x", {bounds.x});
       this.displayContainer.setAttribute("y", {bounds.y});
@@ -217,7 +219,7 @@ class HTMLJSVisitor(ViewVisitor):
   def visitKey(self, key: 'Key'):
     bounds = key.bounds + self.offset
     black = 'true' if key.black else 'false'
-    self.append(f'this.addKey({bounds.coords()}, {key.number}, {black}, "{key.shape.path}");')
+    self.append(f'this.addKey({bounds.coords()}, {key.idx}, {key.number}, {black}, "{key.shape.path}");')
 
   def visitKeyboard(self, keyboard: 'Keyboard'):
     offset = self.offset
@@ -225,7 +227,7 @@ class HTMLJSVisitor(ViewVisitor):
     x, y = self.offset.x, self.offset.y
     w, h = keyboard.bounds.w, keyboard.bounds.h
 
-    self.append(f'this.addKeyboard({x}, {y}, {w}, {h}, Colors.KEYBOARD_BACKGROUND)')
+    self.append(f'this.keyboard = this.addKeyboard({x}, {y}, {w}, {h}, Colors.KEYBOARD_BACKGROUND)')
 
     for key in keyboard.items:
       key.accept(self)

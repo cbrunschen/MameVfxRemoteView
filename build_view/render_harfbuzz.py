@@ -5,7 +5,7 @@ import os
 import subprocess
 from textwrap import dedent
 from dataclasses import dataclass, field
-from util import Alignment, dprint,  set_debug
+from util import Alignment, dprint, set_debug
 from renderutil import Metrics, PathBuilder, ti
       
 
@@ -85,18 +85,26 @@ class Font:
 
 class TextRenderer:
   file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
-  font_map = {
-    ('Arimo', False, False): (os.path.join(file_path, 'fonts/Arimo.ttf'), 400),
-    ('Arimo', True, False): (os.path.join(file_path, 'fonts/Arimo.ttf'), 700),
-    ('Arimo', False, True): (os.path.join(file_path, 'fonts/Arimo-Italic.ttf'), 400),
-    ('Arimo', True, True): (os.path.join(file_path, 'fonts/Arimo-Italic.ttf'), 700),
+  font_map = { 
+    'Arimo' : {
+      False: os.path.join(file_path, 'fonts/Arimo.ttf'),
+      True : os.path.join(file_path, 'fonts/Arimo-Italic.ttf'),
+    },
   }
 
   def get_font_file(self, family: str, bold: bool, italic: bool):
+    dprint(f'get_font_file("{family}", {bold=}, {italic=})')
+    if family in self.font_map:
+      path = self.font_map[family][italic]
+      dprint(f'get_font_file() from map returns "{path}"')
+      return path
+
     weight = 'bold' if bold else 'regular'
     slant = 'italic' if italic else 'roman'
     cmd = ['fc-match', '--format=%{file}', f'{family}:weight={weight}:slant={slant}']
+    dprint(f'get_font_file() running command: "{cmd}"')
     result = subprocess.run(cmd, capture_output=True, encoding='utf8')
+    dprint(f'get_font_file() result: "{result.stdout}"')
     return result.stdout
   
   def pathForText(self, s:str, font: hb.Font): # type: ignore
@@ -177,6 +185,7 @@ class TextRenderer:
     for info in face.axis_infos:
       dprint(f"Face has axis info {info}")
       if info.tag == 'wght':
+        dprint(f'Setting font weight to {weight}')
         font.set_variation(info.tag, weight)
 
     return Font(font, family, 1.0, metrics=self.metrics(font).scaledToTextHeight(1.0), bold=bold, italic=italic)

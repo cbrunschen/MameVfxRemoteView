@@ -10,18 +10,19 @@ PRG="${DIR}/build_view.py"
 # Activate the virtual environment
 . ${DIR}/.venv/bin/activate
 
-OPTS=(--text-paths --segment-paths --real-logos)
+OPTS=(--text-paths --segments=real --real-logos) # --debug)
 
 COMPRESS=true
 OUTPUT=artwork
-while getopts bno: name
+while getopts bno:- name
 do
     case $name in
-    b)  OPTS=();;
-    n)  COMPRESS=false;;
-    o)  OUTPUT="${OPTARG}";;
-    ?)  printf "Usage: %s: [-o artwork-directory] <build-view.py flags>\n" $0
-        exit 2;;
+    b) OPTS=();;
+    n) COMPRESS=false;;
+    o) OUTPUT="${OPTARG}";;
+    -) break;;
+    ?) printf "Usage: %s: [-o artwork-directory] [-n] [-b] [-- <build_view.py flags>]\n" $0
+       exit 2;;
     esac
 done
 
