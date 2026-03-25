@@ -99,18 +99,10 @@ function svg() {
   return _svg;
 }
 
-var _pt = null;
-function pt() {
-  if (_pt == null) {
-    _pt = svg().createSVGPoint();
-  }
-  return _pt;
-}
-
 function pointIn(el, x, y) {
-  var p = pt();
-  p.x = x; p.y = y;
-  return p.matrixTransform(el.getScreenCTM().inverse());
+  let t = new DOMPoint(x=x, y=y).matrixTransform(el.getScreenCTM().inverse());
+  // console.log(`Transforming (${x},${y}) -> (${t.x},${t.y})`);
+  return t;
 }
 
 class Display {
@@ -451,8 +443,8 @@ class PatchSelectButton {
 
     rect = rect.offset(-rect.x, -rect.y)
     this.outline = rect.toPath({fill:Colors.BUTTON_LIGHT, stroke:'none'});
-    console.log(`PatchSelect outline:`);
-    console.log(this.outline);
+    // console.log(`PatchSelect outline:`);
+    // console.log(this.outline);
 
     this.group = createElement("g", {transform:translation});
     this.group.appendChild(this.outline);
@@ -460,11 +452,10 @@ class PatchSelectButton {
     this.value = number;
     this.color = Colors.BUTTON_LIGHT;
 
-    this.group.addEventListener("touchstart", function(e) { that.press(e); }, true);
-    this.group.addEventListener("touchend", function(e) { that.release(e); }, true);
-    this.group.addEventListener("mousedown", function(e) { that.press(e); }, true);
-    this.group.addEventListener("mouseout", function(e) { that.release(e); }, true);
-    this.group.addEventListener("mouseup", function(e) { that.release(e); }, true);
+    this.group.addEventListener("pointerdown", function(e) { that.press(e); }, true);
+    this.group.addEventListener("pointercancel", function(e) { that.release(e); }, true);
+    this.group.addEventListener("pointerout", function(e) { that.release(e); }, true);
+    this.group.addEventListener("pointerup", function(e) { that.release(e); }, true);
 
     this.isPressed = false;
 
@@ -509,7 +500,7 @@ class Button {
     this.rect = new Rect(x, y, w, h);
 
     var rect = this.rect.inset(0.25, 0.25);
-    var translation = "translate(" + x + "," + y + ")";
+    var translation = `translate(${x},${y})`;
     this.halo = rect.toPath({
       rx:1.25,
       stroke: Colors.HALO,
@@ -531,9 +522,10 @@ class Button {
     this.value = number;
     this.color = color;
 
-    this.group.addEventListener("mousedown", function(e) { that.press(e); }, true);
-    this.group.addEventListener("mouseout", function(e) { that.release(e); }, true);
-    this.group.addEventListener("mouseup", function(e) { that.release(e); }, true);
+    this.group.addEventListener("pointerdown", function(e) { that.press(e); }, true);
+    this.group.addEventListener("pointercancel", function(e) { that.release(e); }, true);
+    this.group.addEventListener("pointerout", function(e) { that.release(e); }, true);
+    this.group.addEventListener("pointerup", function(e) { that.release(e); }, true);
 
     this.group.setAttribute("class", "button");
 
@@ -557,7 +549,7 @@ class Button {
 
   press(e) {
     if (!this.isPressed) {
-      console.log(`Button ${this.value} Press`)
+      // console.log(`Button ${this.value} Press`)
       this.isPressed = true;
       this.showPressed(true);
 
@@ -565,13 +557,13 @@ class Button {
         this.onPress(this);
       }
     } else {
-      console.log(`Button ${this.value} Repeat Press`)
+      // console.log(`Button ${this.value} Repeat Press`)
     }
   }
 
   release(e) {
     if (this.isPressed) {
-      console.log(`Button ${this.value} Release`)
+      // console.log(`Button ${this.value} Release`)
       this.isPressed = false;
       this.showPressed(false);
 
@@ -579,7 +571,7 @@ class Button {
         this.onRelease(this);
       }
     } else {
-      console.log(`Button ${this.value} Repeat Release`)
+      // console.log(`Button ${this.value} Repeat Release`)
     }
   }
 }
@@ -649,44 +641,80 @@ class Media {
   }
 }
 
-class TouchPoint {
+class PointerPoint {
   constructor(x, y) {
     this.x = x;
     this.y = y;
   }
 
-  static center(touches) {
-    console.log(`TouchPoint.center(${touches}) of ${touches.size} touches:`)
-    var n = touches.size;
+  static center(activePointers) {
+    // console.log(`PointerPoint.center(${activePointers}) of ${activePointers.size} pointers:`)
+    var n = activePointers.size;
     if (n <= 0) {
       return null;
     }
     var x = 0;
     var y = 0;
 
-    for (var touch of touches.values()) {
-      console.log(`   (${touch.clientX}, ${touch.clientY})`)
+    for (var touch of activePointers.values()) {
+      // console.log(`   (${touch.clientX}, ${touch.clientY})`)
       x += touch.clientX;
       y += touch.clientY;
     }
 
-    console.log(`=> (${x / n}, ${y / n})`)
+    // console.log(`=> (${x / n}, ${y / n})`)
 
-    return new TouchPoint(x / n, y / n);
+    return new PointerPoint(x / n, y / n);
   }
 }
 
 class Key {
-  constructor(keyboard, x, y, number, black, path) {
+  static {
+    this.w_white = 22.5;
+    // the horizontal space, kerf, between two adjacent white keys
+    this.kerf_x_ww = 1;
+
+    this.f_white = this.w_white / (this.w_white + this.kerf_x_ww);
+    this.l_black = 88;
+    this.l_white = 138;
+
+    // the vertical space between the lower end of a black key and the upper end of the surrounding white keys
+    this.kerf_y = 2;
+
+    this.y_12 = (this.l_black + this.kerf_y) / this.l_white;
+    this.y_12_0 = this.l_black / this.l_white;
+
+    this.strike_both_bottom = this.l_black - 3;
+    this.strike_both_top = this.l_black - 43;
+
+    this.strike_white_low_bottom = this.l_white - 3;
+    this.strike_white_low_top = this.l_white - 43;
+
+    this.strike_white_break = (this.strike_both_bottom + this.strike_white_low_top) / 2;
+
+    this.pressure_length = 25;
+    this.pressure_hysteresis = 3;
+  }
+
+  constructor(keyboard, x, y, w, h, idx, number, black, path) {
     this.keyboard = keyboard;
     this.x = x;
     this.y = y;
+    this.w = w;
+    this.h = h;
+    this.idx = idx;
     this.number = number;
     this.black = black;
     this.path = path;
 
     this.velocity = 0;
     this.pressure = 0;
+
+    this.pointers = new Set();
+
+    this.onDown = undefined;
+    this.onPress = undefined;
+    this.onUp = undefined;
 
     if (this.black) {
       this.color = Colors.KEY_BLACK;
@@ -701,7 +729,7 @@ class Key {
       this.color_pressure_min = Colors.KEY_WHITE_PRESSURE_MIN;
       this.color_pressure_max = Colors.KEY_WHITE_PRESSURE_MAX;
     }
-    var translation = "translate(" + x + "," + y + ")";
+    var translation = `translate(${x},${y})`;
     this.element = createElement("path", {
       transform: translation,
       class: 'key',
@@ -725,134 +753,291 @@ class Key {
       this.element.setAttribute("fill", this.color);
     }
   }
+
+  maybeDown() { if (this.onDown != null) this.onDown(this); }
+  maybePress() { if (this.onPress != null) this.onPress(this); }
+  maybeUp() { if (this.onUp != null) this.onUp(this); }
+
+  static valueWithin(pos, top, bottom, mn, mx) {
+    const d = mx - mn;
+		const fraction = (bottom - pos) / (bottom - top);
+    const value = Math.floor(mn + 0.5 + d * fraction);
+    return clamp(value, mn, mx);
+  }
+
+  static velocityWithin(pos, top, bottom) {
+    // console.log(`velocityWithin(${pos}, ${top}, ${bottom})`);
+		const fraction = (bottom - pos) / (bottom - top);
+		var velocity = Math.floor(1.5 + 126 * fraction);
+		velocity = clamp(velocity, 1, 127);
+    // console.log(`  fraction=${fraction}, velocity=${velocity}`);
+		return velocity;
+	}
+
+  static velocityForKey(key) {
+    for (const pointer of key.pointers) {
+      const y = (pointer.y / key.h) * key.l;
+      if (key.black || y < this.strike_white_break) {
+        return this.velocityWithin(y, this.strike_both_top, this.strike_both_bottom);
+      } else {
+        return this.velocityWithin(y, this.strike_white_low_top, this.strike_white_low_bottom);
+      }
+    }
+    return 0;
+  }
+
+  static pressureForKey(key) {
+    var pressure = 0;
+    for (const pointer of key.pointers) {
+      const y = (pointer.y / key.h) * key.l;
+      const y_max = (pointer.max_y / key.h) * key.l;
+
+      const fraction = ((y_max - this.pressure_hysteresis) - y) / this.pressure_length;
+      const candidate_pressure = Math.floor(0.5 + 127 * fraction);
+      pressure = Math.max(pressure, clamp(candidate_pressure, 0, 127));
+    }
+    return pressure;
+  }
+
+  down(pointer) {
+    // console.log(`Key<${this.idx}>.down(${pointer.x},${pointer.y})`);
+    const first = this.pointers.size == 0;
+    this.pointers.add(pointer);
+    if (first) {
+      this.velocity = Key.velocityForKey(this);
+      this.pressure = 0;
+      this.updateColor();
+      this.maybeDown();
+    }
+  }
+
+  move(pointer) {
+    // console.log(`Key<${this.idx}>.move(${pointer.x},${pointer.y})`);
+    if (this.pointers.has(pointer)) {
+      this.pressure = Key.pressureForKey(this);
+      this.updateColor();
+      this.maybePress();
+    }
+  }
+
+  up(pointer) {
+    // console.log(`Key<${this.idx}>.up(${pointer.x},${pointer.y}) with ${this.pointers.size} pointers`);
+    this.pointers.delete(pointer);
+    // console.log(`  now have ${this.pointers.size} pointers`);
+    if (this.pointers.size == 0) {
+      this.pressure = this.velocity = 0;
+      this.maybeUp();
+    } else {
+      this.pressure = Key.pressureForKey(this);
+      this.maybePress();
+    }
+    this.updateColor();
+  }
+}
+
+
+class ActivePointer {
+  constructor(id, x, y, key) {
+    this.id = id;
+    this.x = x;
+    this.max_y = this.y = y;
+    this.key = key;
+
+    if (key != null) {
+      key.down(this);
+    }
+  }
+
+  moveTo(x, y, key) {
+    this.x = x;
+    this.y = y;
+    if (key != this.key) {
+      if (this.key != null) {
+        this.key.up(this);
+      }
+
+      this.key = key;
+
+      if (this.key != null) {
+        this.max_y = y;
+        this.key.down(this);
+      }
+    } else if (key != null) {
+      if (y > this.max_y) {
+        this.max_y = y;
+      }
+      this.key.move(this);
+    }
+  }
+
+  done() {
+    if (this.key != null) {
+      this.key.up(this);
+      this.key = null;
+    }
+    this.x = this.y = this.max_y = NaN;
+  }
+}
+
+function clamp(v, mn, mx) {
+  if (v < mn) return mn;
+  else if (mx < v) return mx;
+  else return v;
+}
+
+function modf(v) {
+  const remainder = v % 1.0;
+  // console.log(`  modf(${v}) -> ${v-remainder}, ${remainder}`);
+  return [v - remainder, remainder];
 }
 
 class Keyboard {
-  static octave_shift = 164.5;
-  static w_white = 22.5;
-  static f_white = Keyboard.w_white / (Keyboard.w_white + 1);
-  static l_black = 88;
-  static l_white = 138;
-  static y_12 = (Keyboard.l_black + 2) / Keyboard.l_white;
-  static y_12_0 = Keyboard.l_black / Keyboard.l_white;
+  static {
+    const that = this;
 
-  static strike_both_bottom = Keyboard.l_black - 3;
-  static strike_both_top = Keyboard.l_black - 43;
+    // console.log(`***Keyboard*** Key.w_white = ${Key.w_white}`);
 
-  static strike_white_low_bottom = Keyboard.l_white - 3;
-  static strike_white_low_top = Keyboard.l_white - 43;
+    this.octave_shift = 7 * (Key.w_white + 1); 
 
-  static strike_white_break = (Keyboard.strike_both_bottom + Keyboard.strike_white_low_top) / 2;
+    // The ranges where we can find the tops of the 12 keys within an octave
+    this.k12 = [
+      { key:0,  x0:0,            x1:79027/1000000, black:false, l:Key.l_white },
+      { key:1,  x0:1769/20000,   x1:807/5000,      black:true,  l:Key.l_black },
+      { key:2,  x0:8541/50000,   x1:4997/20000,    black:false, l:Key.l_white },
+      { key:3,  x0:25927/100000, x1:16611/50000,   black:true,  l:Key.l_black },
+      { key:4,  x0:8541/25000,   x1:42067/100000,  black:false, l:Key.l_white },
+      { key:5,  x0:1707/4000,    x1:4997/10000,    black:false, l:Key.l_white },
+      { key:6,  x0:1591/3125,    x1:58207/100000,  black:true,  l:Key.l_black },
+      { key:7,  x0:59149/100000, x1:16611/25000,   black:false, l:Key.l_white },
+      { key:8,  x0:33693/50000,  x1:74681/100000,  black:true,  l:Key.l_black },
+      { key:9,  x0:75623/100000, x1:41459/50000,   black:false, l:Key.l_white },
+      { key:10, x0:4193/5000,    x1:18231/20000,   black:true,  l:Key.l_black },
+      { key:11, x0:92097/100000, x1:3106/3125,     black:false, l:Key.l_white },
+    ];
 
-  static pressure_length = 25;
-  static pressure_hysteresis = 3;
+    // 85 equally sized ranges that each contain exactly one key, and the key
+    // that they contain, so we can check for being outside the edge
+    this.x_to_k12 = [
+      this.k12[0], this.k12[0], this.k12[0], this.k12[0], this.k12[0], this.k12[0], this.k12[0],
+      this.k12[1], this.k12[1], this.k12[1], this.k12[1], this.k12[1], this.k12[1], this.k12[1],
+      this.k12[2], this.k12[2], this.k12[2], this.k12[2], this.k12[2], this.k12[2], this.k12[2], this.k12[2],
+      this.k12[3], this.k12[3], this.k12[3], this.k12[3], this.k12[3], this.k12[3], this.k12[3],
+      this.k12[4], this.k12[4], this.k12[4], this.k12[4], this.k12[4], this.k12[4], this.k12[4],
+      this.k12[5], this.k12[5], this.k12[5], this.k12[5], this.k12[5], this.k12[5], this.k12[5],
+      this.k12[6], this.k12[6], this.k12[6], this.k12[6], this.k12[6], this.k12[6], this.k12[6],
+      this.k12[7], this.k12[7], this.k12[7], this.k12[7], this.k12[7], this.k12[7], this.k12[7],
+      this.k12[8], this.k12[8], this.k12[8], this.k12[8], this.k12[8], this.k12[8], this.k12[8],
+      this.k12[9], this.k12[9], this.k12[9], this.k12[9], this.k12[9], this.k12[9], this.k12[9],
+      this.k12[10], this.k12[10], this.k12[10], this.k12[10], this.k12[10], this.k12[10], this.k12[10],
+      this.k12[11], this.k12[11], this.k12[11], this.k12[11], this.k12[11], this.k12[11], this.k12[11],
+    ];
 
-  // The ranges where we can find the tops of the 12 keys within an octave
-  static k12 = [
-    { key:0,  x0:0,            x1:79027/1000000, black:false, l:Keyboard.l_white },
-    { key:1,  x0:1769/20000,   x1:807/5000,      black:true,  l:Keyboard.l_black },
-    { key:2,  x0:8541/50000,   x1:4997/20000,    black:false, l:Keyboard.l_white },
-    { key:3,  x0:25927/100000, x1:16611/50000,   black:true,  l:Keyboard.l_black },
-    { key:4,  x0:8541/25000,   x1:42067/100000,  black:false, l:Keyboard.l_white },
-    { key:5,  x0:1707/4000,    x1:4997/10000,    black:false, l:Keyboard.l_white },
-    { key:6,  x0:1591/3125,    x1:58207/100000,  black:true,  l:Keyboard.l_black },
-    { key:7,  x0:59149/100000, x1:16611/25000,   black:false, l:Keyboard.l_white },
-    { key:8,  x0:33693/50000,  x1:74681/100000,  black:true,  l:Keyboard.l_black },
-    { key:9,  x0:75623/100000, x1:41459/50000,   black:false, l:Keyboard.l_white },
-    { key:10, x0:4193/5000,    x1:18231/20000,   black:true,  l:Keyboard.l_black },
-    { key:11, x0:92097/100000, x1:3106/3125,     black:false, l:Keyboard.l_white },
-  ];
+    this.makeFindKey = function(n_octaves) {
+      const octaves_width = n_octaves * that.octave_shift;
+      // console.log(`***makeFindKey*** n_octaves = ${n_octaves}, that.octave_shift=${that.octave_shift} => octaves_width=${octaves_width}`);
 
-  // 85 equally sized ranges that each contain exactly one key, and the key
-  // thaty they contain, so we can check for being outside the edge
-  static x_to_k12 = [
-    Keyboard.k12[0], Keyboard.k12[0], Keyboard.k12[0], Keyboard.k12[0], Keyboard.k12[0], Keyboard.k12[0], Keyboard.k12[0],
-    Keyboard.k12[1], Keyboard.k12[1], Keyboard.k12[1], Keyboard.k12[1], Keyboard.k12[1], Keyboard.k12[1], Keyboard.k12[1],
-    Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2], Keyboard.k12[2],
-    Keyboard.k12[3], Keyboard.k12[3], Keyboard.k12[3], Keyboard.k12[3], Keyboard.k12[3], Keyboard.k12[3], Keyboard.k12[3],
-    Keyboard.k12[4], Keyboard.k12[4], Keyboard.k12[4], Keyboard.k12[4], Keyboard.k12[4], Keyboard.k12[4], Keyboard.k12[4],
-    Keyboard.k12[5], Keyboard.k12[5], Keyboard.k12[5], Keyboard.k12[5], Keyboard.k12[5], Keyboard.k12[5], Keyboard.k12[5],
-    Keyboard.k12[6], Keyboard.k12[6], Keyboard.k12[6], Keyboard.k12[6], Keyboard.k12[6], Keyboard.k12[6], Keyboard.k12[6],
-    Keyboard.k12[7], Keyboard.k12[7], Keyboard.k12[7], Keyboard.k12[7], Keyboard.k12[7], Keyboard.k12[7], Keyboard.k12[7],
-    Keyboard.k12[8], Keyboard.k12[8], Keyboard.k12[8], Keyboard.k12[8], Keyboard.k12[8], Keyboard.k12[8], Keyboard.k12[8],
-    Keyboard.k12[9], Keyboard.k12[9], Keyboard.k12[9], Keyboard.k12[9], Keyboard.k12[9], Keyboard.k12[9], Keyboard.k12[9],
-    Keyboard.k12[10], Keyboard.k12[10], Keyboard.k12[10], Keyboard.k12[10], Keyboard.k12[10], Keyboard.k12[10], Keyboard.k12[10],
-    Keyboard.k12[11], Keyboard.k12[11], Keyboard.k12[11], Keyboard.k12[11], Keyboard.k12[11], Keyboard.k12[11], Keyboard.k12[11],
-  ];
+      const full_width = octaves_width + Key.w_white;
+      // console.log(`***makeFindKey*** Key.w_white = ${Key.w_white}, octaves_width=${octaves_width} => full_width=${full_width}`);
 
-  static makeFindKey(n_octaves) {
-    let octaves_width = n_octaves * Keyboard.octave_shift;
-    let full_width = octaves_width + Keyboard.w_white;
+      function find_12_key(x, y, w, h) {
+        // console.log(`  find_12_key(${x},${y},${w},${h})`);
+        if (x < 0 || full_width < x) {
+          return null;
+        }
 
-    function find_12_key(x, y, w, h) {
-      if (x > octaves_width) {
-        return 12 * n_octaves;
-      }
+        // console.log(` x=${x},w=${w},full_width=${full_width},that.octave_shift=${that.octave_shift}`);
+        const pos = (x / w) * (full_width / that.octave_shift);
+        const [octave, kx] = modf(pos);
+        // console.log(`  octave=${octave}, kx=${kx}`);
+        if (octave == n_octaves) {
+          return 12 * octave;
+        }
 
-      let octave, kx = math.modf((x / w) * (full_width / Keyboard.octave_shift))
-      if (octave == n_octaves) {
-        return 12 * octave;
-      }
-
-      let ki = math.floor(85 * kx);
-      let candidate = Keyboard.x_to_k12[ki + 1];
-      if (candidate == null)
-        return null;
-      
-      let ci = 12 * octave + candidate.key;
-      if (candidate.x0 <= kx && kx <= candidate.x1) {
-        if (candidate.black) {
-          rel_y = y / h;
-          if (rel_y <= y_12_0) {
-            return ci;
+        const ki = Math.floor(85 * kx);
+        // console.log(`  ki=${ki}`);
+        const candidate = that.x_to_k12[ki];
+        if (candidate == null)
+          return null;
+        
+        const ci = 12 * octave + candidate.key;
+        if (candidate.x0 <= kx && kx <= candidate.x1) {
+          if (candidate.black) {
+            const rel_y = y / h;
+            if (rel_y <= Key.y_12_0) {
+              return ci;
+            } else {
+              return null;
+            }
           } else {
-            return null;
+            return ci;
           }
         } else {
-          return ci;
+          return null;
         }
-      } else {
+      }
+
+      function find_7_key(x, w) {
+        // console.log(`  find_7_key(${x},${w})`);
+        // console.log(` x=${x},w=${w},full_width=${full_width},that.octave_shift=${that.octave_shift}`);
+
+        const [octave, kx] = modf((x / w) * (full_width / that.octave_shift));
+        const [ki, kkx] = modf(7 * kx);
+        if (kkx <= Key.f_white) {
+          if (ki < 3) {
+            return 12 * octave + 2 * ki;
+          } else {
+            return 12 * octave + 2 * ki - 1;
+          }
+        }
         return null;
       }
-    }
 
-    function find_7_key(x, w) {
-      let octave, kx = math.modf((x / w) * (Keyboard.full_width / Keyboard.octave_shift));
-      let ki, kkx = math.modf(7 * kx);
-      if (kkx <= Keyboard.f_white) {
-        if (ki < 3) {
-          return 12 * octave + 2 * ki;
+      // Build and return the function to find the key.
+      return function (x, y, w, h) {
+        const rel_y = y / h;
+        // console.log(`made findKey(${x},${y},${w},${h}): rel_y = ${rel_y}, y_12=${Key.y_12}`);
+        if (rel_y < 0 || 1 < rel_y) {
+          return null;
+        } else if (rel_y < Key.y_12) {
+          return find_12_key(x, y, w, h);
         } else {
-          return 12 * octave + 2 * ki - 1;
+          return find_7_key(x, w);
         }
-      }
-      return null;
-    }
-
-    return function (x, y, w, h) {
-      rel_y = y / h;
-      if (rel_y < 0 || 1 < rel_y) {
-        return null;
-      } else if (rel_y < y_12) {
-        return find_12_key(x, y, w, h);
-      } else {
-        return find_7_key(x, w);
       }
     }
   }
 
-  constructor(x, y, w, h, color) {
-    this.keys = {};
+  constructor(x, y, w, h, from_octave, n_octaves, color) {
+    this.from_octave = from_octave;
+    this.n_octaves = n_octaves;
 
-    this.element = createElement("rect", {
-      x: x,
-      y: y,
-      width: w,
-      height: h,
+    this.x = 0;
+    this.h = 0;
+    this.w = (Key.w_white + Key.kerf_x_ww) * (7 * n_octaves + 1) - Key.kerf_x_ww;
+    this.h = Key.l_white;
+    const scale_x = w / this.w;
+    const scale_y = h / this.h;
+    const transform = `translate(${x}, ${y}) scale(${scale_x}, ${scale_y})`;
+
+    this.keys = new Array();
+
+    this.findKey = Keyboard.makeFindKey(n_octaves);
+
+    this.group = createElement("g", {transform:transform});
+
+    this.background = createElement("rect", {
+      x: 0,
+      y: 0,
+      width: this.w,
+      height: this.h,
       rx: 2,
       fill: color
     });
-    
+
+    this.group.appendChild(this.background);
+
+    this.pointers = new Map();
+
     // Bind the gesture handlers to this instance.
     this.gestureStart = this.gestureStart.bind(this);
     this.gestureMove = this.gestureMove.bind(this);
@@ -860,133 +1045,84 @@ class Keyboard {
     this.gestureCancel = this.gestureCancel.bind(this);
 
     // Now set the event handlers:
-    // Check if pointer events are supported.
-    // if (window.PointerEvent) {
-    //   console.log("Adding Pointer Event handlers");
-    //   // Pointer events are supported, use those.
-    //   // Add Pointer Event Listener
-    //   this.element.addEventListener('pointerdown', this.gestureStart, { capture: true, passive: false });
-    //   this.element.addEventListener('pointermove', this.gestureMove, { capture: true, passive: false });
-    //   this.element.addEventListener('pointerup', this.gestureEnd, { capture: true, passive: false });
-    //   this.element.addEventListener('pointercancel', this.gestureCancel, { capture: true, passive: false });
-    // } else {
-      console.log("Adding Touch and Mouse Event handlers");
-      // Pointer events are _not_ supported, use touch and mouse events instead.
-      // Add Touch Listener
-      this.element.addEventListener('touchstart', this.gestureStart, { capture: true, passive: false });
-      this.element.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
-      this.element.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
-      this.element.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
-      this.element.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
-      this.element.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
-      this.element.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
-
-      // Add Mouse down Listener
-      this.element.addEventListener('mousedown', this.gestureStart, { capture: true, passive: false });
-    // }
+    console.log("Adding Pointer Event handlers");
+    // Pointer events are supported, use those.
+    // Add Pointer Event Listener
+    this.group.addEventListener('pointerdown', this.gestureStart, { capture: true, passive: false });
+    this.group.addEventListener('pointermove', this.gestureMove, { capture: true, passive: false });
+    this.group.addEventListener('pointerup', this.gestureEnd, { capture: true, passive: false });
+    this.group.addEventListener('pointercancel', this.gestureCancel, { capture: true, passive: false });
+    // For chrome: also add a "touchstart" listener that prevents the default events.
+    this.group.addEventListener('touchstart', function(e) { e.preventDefault(); }, { capture: true, passive: false });
   }
 
   addKey(key) {
+    const shape = Keyboard.k12[key.idx % 12];
+    key.l = shape.l;
     this.keys[key.idx] = key;
-    this.element.appendChild(key.element);
+    this.group.appendChild(key.element);   
   }
 
   gestureStart(e) {
-    console.log(`gestureStart(${e})`)
+    // console.log(`gestureStart(${e})`)
     e.preventDefault();
 
-    let first = (e.touches == null) || (e.touches.length == 1);
+    // Pointer event
+    e.target.setPointerCapture(e.pointerId);
+    // console.log(`- capturing pointer ${e.pointerId}`)
 
-    if (first) {
-      // Add the move and end listeners
-      // if (window.PointerEvent) {
-      //   e.target.setPointerCapture(e.pointerId);
-      //   console.log(`- capturing pointer ${e.pointerId}`)
-      // } else {
-        // Add Mouse Listeners
-        document.addEventListener('mousemove', this.gestureMove, true);
-        document.addEventListener('mouseup', this.gestureEnd, true);
-      // }
-    }
+    let p = pointIn(this.group, e.clientX, e.clientY);
+    let key = this.findKeyAt(p.x, p.y);
 
-    if (e.touches) {
-      for (var i = 0; i < e.targetTouches.length; i++) {
-        var touch = e.targetTouches.item(i);
-        this.activeTouches.set(touch.identifier, touch);
-      }
-
-      let center = TouchPoint.center(this.activeTouches);
-      if (center != null) {
-        this.grab(center.x, center.y);
-      }
-    } else {
-      this.grab(e.clientX, e.clientY);
-    }
+    let pointer = new ActivePointer(e.pointerId, p.x, p.y, key);
+    this.pointers.set(e.pointerId, pointer);
   }
 
   gestureMove(e) {
-    console.log(`gestureMove(${e})`)
+    // console.log(`gestureMove(${e})`)
     e.preventDefault();
 
-    if (e.touches) {
-      for (var i = 0; i < e.changedTouches.length; i++) {
-        var touch = e.changedTouches.item(i);
-        if (this.activeTouches.has(touch.identifier)) {
-          this.activeTouches.set(touch.identifier, touch);
-        }
-      }
-      let center = TouchPoint.center(this.activeTouches);
-      if (center != null) {
-        this.drag(center.x, center.y);
-      }
-    } else {
-      this.drag(e.clientX, e.clientY);
+    var pointer = this.pointers.get(e.pointerId);
+    if (pointer == null) {
+      return;
     }
+
+    let p = pointIn(this.group, e.clientX, e.clientY);
+    let key = this.findKeyAt(p.x, p.y);
+    pointer.moveTo(p.x, p.y, key);
   }
 
   gestureEnd(e) {
-    console.log(`gestureEnd(${e})`)
+    // console.log(`gestureEnd(${e})`)
     e.preventDefault();
 
-    let last = (e.touches == null) || (e.touches.length == 0);
+    // console.log(`- releasing pointer ${e.pointerId}`)
+    e.target.releasePointerCapture(e.pointerId);
 
-    if (last) {
-      // Remove Event Listeners
-      // if (window.PointerEvent) {
-      //   console.log(`- releasing pointer ${e.pointerId}`)
-      //   e.target.releasePointerCapture(e.pointerId);
-      // } else {
-        // Remove Mouse Listeners
-        document.removeEventListener('mousemove', this.gestureMove, true);
-        document.removeEventListener('mouseup', this.gestureEnd, true);
-      // }
+    var pointer = this.pointers.get(e.pointerId);
+    if (pointer == null) {
+      return;
     }
 
-    if (e.touches) {
-      for (var i = 0; i < e.changedTouches.length; i++) {
-        var touch = e.changedTouches.item(i);
-        this.activeTouches.delete(touch.identifier)
-      }
-      if (this.activeTouches.size > 0) {
-        let center = TouchPoint.center(this.activeTouches);
-        if (center != null) {
-          this.grab(center.x, center.y);
-        }
-      } else {
-        this.release();
-      }
-    } else {
-      this.release();
-    }
+    pointer.done();
+    this.pointers.delete(e.pointerId);
   }
 
   gestureCancel(e) {
-    console.log(`gestureCancel(${e})`)
-    e.preventDefault();
-
+    // console.log(`gestureCancel(${e})`)
     this.gestureEnd(e);
   }
 
+  findKeyAt(x, y) {
+    // console.log(`findKeyAt(${x},${y}): findKey(${x}, ${y}, ${this.w}, ${this.h})`);
+    const idx = this.findKey(x, y, this.w, this.h);
+    // console.log(`- idx = ${idx}`);
+    if (idx != null) {
+      return this.keys[idx];
+    } else {
+      return null;
+    }
+  }
 }
 
 function makeRectPath(x, y, w, h, color) {
@@ -998,19 +1134,19 @@ function makeRectPath(x, y, w, h, color) {
 class Slideable {
   constructor(x, y, w, h, channel, value) {
     this.channel = channel;
-    this.value = value;
+    this.position = value;
 
     this.rect = new Rect(x, y, w, h);
     var rect = this.rect.offset(-x, -y);
-    var translation = "translate(" + x + "," + y + ")";
+    var translation = `translate(${x},${y})`;
     this.group = createElement("g", {transform:translation, class:'slider'});
 
     this.populate(rect);
 
-    this.setValue(value);
+    this.setPosition(value);
     this.onValueChanged = undefined;
     this.isGrabbed = false;
-    this.activeTouches = new Map();
+    this.activePointers = new Map();
 
     // Bind the gesture handlers to this instance.
     this.gestureStart = this.gestureStart.bind(this);
@@ -1019,141 +1155,96 @@ class Slideable {
     this.gestureCancel = this.gestureCancel.bind(this);
 
     // Now set the event handlers:
-    // Check if pointer events are supported.
-    // if (window.PointerEvent) {
-    //   console.log("Adding Pointer Event handlers");
-    //   // Pointer events are supported, use those.
-    //   // Add Pointer Event Listener
-    //   this.handle.addEventListener('pointerdown', this.gestureStart, { capture: true, passive: false });
-    //   this.handle.addEventListener('pointermove', this.gestureMove, { capture: true, passive: false });
-    //   this.handle.addEventListener('pointerup', this.gestureEnd, { capture: true, passive: false });
-    //   this.handle.addEventListener('pointercancel', this.gestureCancel, { capture: true, passive: false });
-    // } else {
-      console.log("Adding Touch and Mouse Event handlers");
-      // Pointer events are _not_ supported, use touch and mouse events instead.
-      // Add Touch Listener
-      this.handle.addEventListener('touchstart', this.gestureStart, { capture: true, passive: false });
-      this.handle.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
-      this.handle.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
-      this.handle.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
-      this.group.addEventListener('touchmove', this.gestureMove, { capture: true, passive: false });
-      this.group.addEventListener('touchend', this.gestureEnd, { capture: true, passive: false });
-      this.group.addEventListener('touchcancel', this.gestureEnd, { capture: true, passive: false });
-
-      // Add Mouse Listener
-      this.handle.addEventListener('mousedown', this.gestureStart, { capture: true, passive: false });
-    // }
+    console.log("Adding Pointer Event handlers");
+    // Pointer events are supported, use those.
+    // Add Pointer Event Listener
+    this.handle.addEventListener('pointerdown', this.gestureStart, { capture: true, passive: false });
+    this.handle.addEventListener('pointermove', this.gestureMove, { capture: true, passive: false });
+    this.handle.addEventListener('pointerup', this.gestureEnd, { capture: true, passive: false });
+    this.handle.addEventListener('pointercancel', this.gestureCancel, { capture: true, passive: false });
+    // For chrome: also add a "touchstart" listener that prevents the default events.
+    this.handle.addEventListener('touchstart', function(e) { e.preventDefault(); }, { capture: true, passive: false });
   }
 
   gestureStart(e) {
-    console.log(`gestureStart(${e})`)
+    // console.log(`gestureStart(${e})`)
     e.preventDefault();
 
-    let first = (e.touches == null) || (e.touches.length == 1);
+    e.target.setPointerCapture(e.pointerId);
 
-    if (first) {
-      // Add the move and end listeners
-      // if (window.PointerEvent) {
-      //   e.target.setPointerCapture(e.pointerId);
-      //   console.log(`- capturing pointer ${e.pointerId}`)
-      // } else {
-        // Add Mouse Listeners
-        document.addEventListener('mousemove', this.gestureMove, true);
-        document.addEventListener('mouseup', this.gestureEnd, true);
-      // }
-    }
+    this.activePointers.set(e.pointerId, e);
 
-    if (e.touches) {
-      for (var i = 0; i < e.targetTouches.length; i++) {
-        var touch = e.targetTouches.item(i);
-        this.activeTouches.set(touch.identifier, touch);
-      }
-
-      let center = TouchPoint.center(this.activeTouches);
-      if (center != null) {
-        this.grab(center.x, center.y);
-      }
+    let center = PointerPoint.center(this.activePointers);
+    if (center != null) {
+      this.grab(center.x, center.y);
     } else {
       this.grab(e.clientX, e.clientY);
     }
   }
 
   gestureMove(e) {
-    console.log(`gestureMove(${e})`)
+    // console.log(`gestureMove(${e})`)
     e.preventDefault();
 
-    if (e.touches) {
-      for (var i = 0; i < e.changedTouches.length; i++) {
-        var touch = e.changedTouches.item(i);
-        if (this.activeTouches.has(touch.identifier)) {
-          this.activeTouches.set(touch.identifier, touch);
-        }
-      }
-      let center = TouchPoint.center(this.activeTouches);
-      if (center != null) {
-        this.drag(center.x, center.y);
-      }
+    this.activePointers.set(e.pointerId, e);
+
+    let center = PointerPoint.center(this.activePointers);
+    if (center != null) {
+      this.drag(center.x, center.y);
     } else {
       this.drag(e.clientX, e.clientY);
     }
   }
 
   gestureEnd(e) {
-    console.log(`gestureEnd(${e})`)
+    // console.log(`gestureEnd(${e})`)
     e.preventDefault();
+    // console.log(`- releasing pointer ${e.pointerId}`)
+    e.target.releasePointerCapture(e.pointerId);
 
-    let last = (e.touches == null) || (e.touches.length == 0);
+    this.activePointers.delete(e.pointerId);
 
-    if (last) {
-      // Remove Event Listeners
-      // if (window.PointerEvent) {
-      //   console.log(`- releasing pointer ${e.pointerId}`)
-      //   e.target.releasePointerCapture(e.pointerId);
-      // } else {
-        // Remove Mouse Listeners
-        document.removeEventListener('mousemove', this.gestureMove, true);
-        document.removeEventListener('mouseup', this.gestureEnd, true);
-      // }
-    }
-
-    if (e.touches) {
-      for (var i = 0; i < e.changedTouches.length; i++) {
-        var touch = e.changedTouches.item(i);
-        this.activeTouches.delete(touch.identifier)
-      }
-      if (this.activeTouches.size > 0) {
-        let center = TouchPoint.center(this.activeTouches);
-        if (center != null) {
-          this.grab(center.x, center.y);
-        }
-      } else {
-        this.release();
-      }
-    } else {
+    if (this.activePointers.size == 0) {
       this.release();
     }
   }
 
   gestureCancel(e) {
-    console.log(`gestureCancel(${e})`)
+    // console.log(`gestureCancel(${e})`)
     e.preventDefault();
 
     this.gestureEnd(e);
   }
 
-  setValue(value) {
-    this.value = Math.max(0.0, Math.min((1.0, value)));
+  valueForPosition(position) {
+    return position;
+  }
+
+  positionForValue(value) {
+    return value;
+  }
+
+  setPosition(position) {
+    this.position = Math.max(0.0, Math.min((1.0, position)));
     this.handleY = Math.max(this.handleMinY, 
       Math.min(this.handleMaxY, 
-        this.handleMinY + (1.0 - value) * (this.handleMaxY - this.handleMinY)
+        this.handleMinY + (1.0 - position) * (this.handleMaxY - this.handleMinY)
       ));
     this.handle.setAttribute("transform", "translate(" + this.handleX + "," + this.handleY + ")");
+  }
+
+  setValue(value) {
+    this.setPosition(this.positionForValue(value));
+  }
+
+  getValue() {
+    return this.valueForPosition(this.position);
   }
 
   setHandleY(handleY) {
     this.handleY = Math.max(this.handleMinY, Math.min(this.handleMaxY, handleY));
     // console.log("Setting handleY to " + handleY + " => " + this.handleY);
-    this.value = 1.0 - (this.handleY - this.handleMinY) / (this.handleMaxY - this.handleMinY);
+    this.position = 1.0 - (this.handleY - this.handleMinY) / (this.handleMaxY - this.handleMinY);
     this.handle.setAttribute("transform", "translate(" + this.handleX + "," + this.handleY + ")");
   }
 
@@ -1162,14 +1253,14 @@ class Slideable {
     this.frame.setAttribute("stroke", this.frameActiveColor);
     var p = pointIn(this.group, x, y);
     this.dragOffset = p.y - this.handleY;
-    console.log("Grabbing with handleY=" + this.handleY + ", p.y=" + p.y + " => dragOffset=" + this.dragOffset);
+    // console.log("Grabbing with handleY=" + this.handleY + ", p.y=" + p.y + " => dragOffset=" + this.dragOffset);
   }
 
   drag(x, y) {
     if (this.isGrabbed) {
       var p = pointIn(this.group, x, y);
       var newHandleY = p.y - this.dragOffset;
-      console.log("Dragged with p.y=" + p.y + ", dragOffset=" + this.dragOffset + " => new handleY=" + newHandleY);
+      // console.log("Dragged with p.y=" + p.y + ", dragOffset=" + this.dragOffset + " => new handleY=" + newHandleY);
       this.setHandleY(newHandleY);
       if (this.onValueChanged != null) {
         this.onValueChanged(this);
@@ -1210,13 +1301,22 @@ class Slider extends Slideable {
     this.handle.appendChild(makeRectPath(0, 8.175, this.handleW, 1.875, Colors.BLACK_PLASTIC_SHADE));
     this.group.appendChild(this.handle);
   }
+
+  // position 0.05 <=> value 0; position 0.95 <=> value 760
+  valueForPosition(position) {
+    return Math.round(Math.max(0, Math.min(1023, 760 * ((position - 0.05) / 0.9))));
+  }
+
+  positionForValue(value) {
+    return Math.max(0.0, Math.min(1.0, 0.05 + (value / 760)));
+  }
 }
 
 class Wheel extends Slideable {
   constructor(x, y, w, h, channel, value, autocenter = false) {
     super(x, y, w, h, channel, value);
     this.autocenter = autocenter;
-    console.log(`constructing Wheel(${x},${y},${w},${h}, ${channel},${value}, ${autocenter})`)
+    // console.log(`constructing Wheel(${x},${y},${w},${h}, ${channel},${value}, ${autocenter})`)
   }
 
   populate(rect) {
@@ -1246,11 +1346,19 @@ class Wheel extends Slideable {
   release(e) {
     super.release(e)
     if (this.autocenter) {
-      this.setValue(0.5);
+      this.setPosition(0.5);
       if (this.onValueChanged) {
         this.onValueChanged(this);
       }
     }
+  }
+
+  valueForPosition(position) {
+    return Math.round(Math.max(0, Math.min(1023, 1023 * (1.0 - position))));
+  }
+
+  positionForValue(value) {
+    return Math.max(0.0, Math.min(1.0, ((1023 - value) / 1023.0)));
   }
 }
 
@@ -1430,11 +1538,11 @@ class Connector {
     let text_up = m.actualBoundingBoxAscent;
     let text_down = m.actualBoundingBoxDescent;
 
-    console.log(`Measuring '${font}': ascent=${ascent}, descent=${descent}, up=${text_up}, down=${text_down}`);
+    // console.log(`Measuring '${font}': ascent=${ascent}, descent=${descent}, up=${text_up}, down=${text_down}`);
 
     let factor = scale / (text_up + text_down);
 
-    console.log(`font size factor for '${font} = ${factor}`);
+    // console.log(`font size factor for '${font} = ${factor}`);
     return factor;
   }
 
@@ -1524,14 +1632,14 @@ class Connector {
     return ellipse;
   }
 
-  addKeyboard(x, y, w, h, color) {
-    this.keyboard = new Keyboard(x, y, w, h, color);
-    this.mainContainer.appendChild(this.keyboard.element);
+  addKeyboard(x, y, w, h, from_octave, n_octaves, color) {
+    this.keyboard = new Keyboard(x, y, w, h, from_octave, n_octaves, color);
+    this.mainContainer.appendChild(this.keyboard.group);
     return this.keyboard;
   }
 
   addKey(x, y, w, h, idx, keyNumber, black, path) {
-    let key = new Key(this.keyboard, x, y, keyNumber, black, path)
+    let key = new Key(this.keyboard, x, y, w, h, idx, keyNumber, black, path)
     this.keyboard.addKey(key);
     return key;
   }
@@ -1645,7 +1753,7 @@ class Connector {
     this.model = keyboard;
     this.view = view;
 
-    console.log("Getting font size factors:");
+    // console.log("Getting font size factors:");
     this.fontSizeFactors = {
       '': this.fontSizeFactor(false, false),
       'bold' : this.fontSizeFactor(true, false),
@@ -1755,19 +1863,19 @@ class Connector {
 
   sendPatchSelectStatus() {
     const status = "A 1 " + 250 * this.patchSelectStatus;
-    console.log(`Sending patch select status '${status}'`);
+    // console.log(`Sending patch select status '${status}'`);
     this.sendString(status);
   }
 
   onPatchSelectButtonPressed(button) {
     this.patchSelectStatus |= (1 << button.value);
-    console.log(`patch select button ${button.value} pressed: status = ${this.patchSelectStatus}`)
+    // console.log(`patch select button ${button.value} pressed: status = ${this.patchSelectStatus}`)
     this.sendPatchSelectStatus();
   }
 
   onPatchSelectButtonReleased(button) {
     this.patchSelectStatus &= ~(1 << button.value);
-    console.log(`patch select button ${button.value} released: status = ${this.patchSelectStatus}`)
+    // console.log(`patch select button ${button.value} released: status = ${this.patchSelectStatus}`)
     this.sendPatchSelectStatus();
   }
 
@@ -1780,21 +1888,19 @@ class Connector {
   }
 
   onSliderChanged(slider) {
-    // 0.05 == 0; 0.95 == 760
-    var value = (slider.value - 0.05) / 0.9;
-    value = 760 * value;
-    value = Math.round(Math.max(0, Math.min(1023, value)));
+    // position 0.05 == value 0; position 0.95 == value 760
+    var value = slider.getValue()
     var s = "A " + slider.channel + " " + value;
 
-    console.log(`sending slider value: ${s}`);
+    // console.log(`sending slider value: ${s}`);
     this.sendString(s);
   }
 
   onWheelChanged(wheel) {
-    let value = Math.round(Math.max(0, Math.min(1023, 1023 * (1.0 - wheel.value))));
+    let value = wheel.getValue();
     var s = "A " + wheel.channel + " " + value;
 
-    console.log(`sending wheel value: ${s}`);
+    // console.log(`sending wheel value: ${s}`);
     this.sendString(s);
   }
 
@@ -1864,7 +1970,7 @@ class Connector {
 
   handleAnalogValue(data) {
     var s = data.trim();
-    console.log("Handling analog value: '" + s + "'");
+    // console.log(`Handling analog value: '${s}'`);
     var parts = s.split(" ");
     if ((parts.length % 2) == 0) {
       for (var i = 0; i < parts.length - 1; i += 2) {
@@ -1872,13 +1978,11 @@ class Connector {
         var value = parseInt(parts[i+1]);
 
         var analogControl = this.analogControls[channel];
+        // console.log(`Analog control for channel ${channel} is ${analogControl}`)
         if (analogControl != null) {
-          if (analogControl instanceof Slider) {
-            // 0.05 == 0; 0.95 == 760
-            let position = value / 760.0;
-            position = 0.05 + 0.9 * position;
-            console.log(`Setting channel ${channel} value ${value} => position ${position}`);
-            analogControl.setValue(position);
+          if (analogControl instanceof Slideable) {
+            // console.log(`Setting channel ${channel} value ${value}`);
+            analogControl.setValue(value);
           }
         }
       }
@@ -1908,7 +2012,7 @@ class Connector {
 
     var model = parts[0];
     var version = parseInt(parts[1]);
-    console.log(`Server information message '${s}' -> model '${model}' version '${version}'`);
+    // console.log(`Server information message '${s}' -> model '${model}' version '${version}'`);
     if (version != this.version) {
       // we need to reload, forcing a refresh from the server.
       // console.log(`model '${model}' vs '${this.model}', version '${version}' vs '${this.version}', would reload`);

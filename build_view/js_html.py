@@ -80,6 +80,7 @@ class HTMLJSVisitor(ViewVisitor):
     self.append('}')
   
   def visitGroup(self, group: Group):
+    offset = self.offset
     self.offset = self.offset + group.offset
     self.append(f"// Starting group '{group.id}' at offset {self.offset.x},{self.offset.y}")
 
@@ -87,8 +88,7 @@ class HTMLJSVisitor(ViewVisitor):
       i.accept(self)
 
     self.append(f"// Ending group '{group.id}'")
-
-    self.offset -= group.offset
+    self.offset = offset
 
   def visitDisplay(self, display: 'Display'):
     bounds = display.bounds + self.offset
@@ -217,21 +217,25 @@ class HTMLJSVisitor(ViewVisitor):
     self.append(f'this.addEllipse({bounds.coords()}, {color});')
 
   def visitKey(self, key: 'Key'):
-    bounds = key.bounds + self.offset
     black = 'true' if key.black else 'false'
-    self.append(f'this.addKey({bounds.coords()}, {key.idx}, {key.number}, {black}, "{key.shape.path}");')
+    self.append(f'this.addKey({key.bounds.coords()}, {key.idx}, {key.number}, {black}, "{key.shape.path}");')
 
   def visitKeyboard(self, keyboard: 'Keyboard'):
     offset = self.offset
     self.offset = self.offset + keyboard.bounds.origin
+
     x, y = self.offset.x, self.offset.y
     w, h = keyboard.bounds.w, keyboard.bounds.h
+    fo = keyboard.from_octave
+    no = keyboard.n_octaves
 
-    self.append(f'this.keyboard = this.addKeyboard({x}, {y}, {w}, {h}, Colors.KEYBOARD_BACKGROUND)')
+    self.keyboard = keyboard
+    self.append(f'this.keyboard = this.addKeyboard({x}, {y}, {w}, {h}, {fo}, {no}, Colors.KEYBOARD_BACKGROUND)')
 
     for key in keyboard.items:
       key.accept(self)
 
+    self.keyboard = None
     self.offset = offset
 
   def visitShowDrawing(self, show: ShowDrawing):
