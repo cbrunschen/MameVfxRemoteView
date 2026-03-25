@@ -297,10 +297,16 @@ class ViewBuilder:
   
   def addDisplayOnly(self, offset: Vector|None = None):
     self.beginGroup("DisplayOnly", offset)
+
+    glassRect = Rect(0, 8, 245, 67.5)
+    roughDisplayRect = glassRect.inset(12, 18)
     charRect = Rect(0, 0, 342, 572)
     charsRect = Rect(0, 0, 40 * charRect.w, 2 * charRect.h)
-    self.add(Rectangle(charsRect, 'glass'))
-    self.add(Display(charsRect))
+    displayRect = charsRect.fitWithin(roughDisplayRect).outset(1, 1)
+
+    self.add(Rectangle(displayRect, 'glass'))
+    self.add(Display(displayRect))
+
     return self.endGroup()
 
   def addDisplayArea(self, offset: Vector|None = None):
