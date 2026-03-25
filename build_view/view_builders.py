@@ -302,9 +302,11 @@ class ViewBuilder:
     roughDisplayRect = glassRect.inset(12, 18)
     charRect = Rect(0, 0, 342, 572)
     charsRect = Rect(0, 0, 40 * charRect.w, 2 * charRect.h)
-    displayRect = charsRect.fitWithin(roughDisplayRect).outset(1, 1)
+    displayRect = charsRect.fitWithin(roughDisplayRect)
 
-    self.add(Rectangle(displayRect, 'glass'))
+    paddingRect = Rect(displayRect.x-1, displayRect.y-1.75, displayRect.w+2, displayRect.h+2)
+
+    self.add(Rectangle(paddingRect, 'glass'))
     self.add(Display(displayRect))
 
     return self.endGroup()
