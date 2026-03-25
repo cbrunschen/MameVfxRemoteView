@@ -11,7 +11,6 @@ import util
 import render
 
 def main():
-  print("MAIN")
   parser = ArgumentParser()
   group = parser.add_mutually_exclusive_group()
   group.add_argument('-l', '--layout', choices=['vfx','vfxsd','sd1','sd132'])
@@ -50,11 +49,12 @@ def main():
     'Compact': CompactViewBuilder,
     'Panel': PanelViewBuilder,
     'Tablet': TabletViewBuilder,
+    'Display': DisplayOnlyViewBuilder,
   }
   
   if visitor:
     for name, builder_class in views.items():
-      builder = builder_class(name, visitor.defaultFontSize())
+      builder = builder_class(name)
       visitor.visitView(builder.withRealLogos(args.real_logos).build())
     print(visitor)
   else:
@@ -68,5 +68,4 @@ def main():
 #   eprint(f"  Color.get('{color.name}') = {Color.get(color.name)}")
 
 if __name__ == '__main__':
-  print("Running main()")
   exit(main())
