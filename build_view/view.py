@@ -324,6 +324,7 @@ class Keyboard(Group):
 @dataclass
 class View(Context):
   name: str
+  is_interactive: bool = True
 
   def __post_init__(self):
     super().__init__()
