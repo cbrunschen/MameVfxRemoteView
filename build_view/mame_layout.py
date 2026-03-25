@@ -735,16 +735,17 @@ class MameLayoutVisitor(ViewVisitor):
     dprint(f'visiting view {view}, items = {view.items}')
     super().visitView(view)
 
-    # Also add the warning about the need for the layout plugin.
-    vb = view.bounds
-    w = vb.w / 1.5
-    h = w / 15
-    warning_bounds = Rect(vb.x + (vb.w - w) / 2, vb.y + (vb.h - h) / 2, w, h)
-    self.warnings.append(self.layout_element(
-      ref='plugin_warning',
-      id='plugin_warning',
-      bounds=warning_bounds,
-    ))
+    if (view.is_interactive):
+      # Also add the warning about the need for the layout plugin.
+      vb = view.bounds
+      w = vb.w / 1.5
+      h = w / 15
+      warning_bounds = Rect(vb.x + (vb.w - w) / 2, vb.y + (vb.h - h) / 2, w, h)
+      self.warnings.append(self.layout_element(
+        ref='plugin_warning',
+        id='plugin_warning',
+        bounds=warning_bounds,
+      ))
 
   def visitShowDrawing(self, show: ShowDrawing):
     drawing = show.drawing
@@ -879,14 +880,25 @@ class MameLayoutVisitor(ViewVisitor):
     init_code = []
     for view, lines in self.init_code.items():
       dprint(f"Generating init code for view '{view}' ({len(lines)} lines)")
-      init_code.extend([
-        '',
-        f'\t\t\tif view.unqualified_name == "{view}" then',
-      ])
-      init_code.extend([indent(line, '\t\t\t\t') for line in lines])
-      init_code.extend([
-        '\t\t\tend',
-      ])
+      if len(lines) > 0:
+        init_code.extend([
+          '',
+          f'\t\t\tif view.unqualified_name == "{view}" then',
+        ])
+        init_interactive = dedent("""\
+        -- Hide the warning about requiring the Layout plugin.
+        view.items["plugin_warning"]:set_state(0)
+
+        local manager = PointerManager:create(view)
+        pointer_managers[view_name] = manager
+        """).split('\n')
+
+        init_code.extend([indent(line, '\t\t\t\t') for line in init_interactive])
+
+        init_code.extend([indent(line, '\t\t\t\t') for line in lines])
+        init_code.extend([
+          '\t\t\tend',
+        ])
     
     code = '\n'.join(init_code)
 
