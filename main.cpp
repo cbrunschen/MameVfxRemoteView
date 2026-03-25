@@ -41,7 +41,10 @@
 #define ARIMO "fonts/Arimo.ttf"
 #define ARIMO_ITALIC "fonts/Arimo-Italic.ttf"
 
+#ifndef DEBUG
 #define DEBUG 0
+#endif
+
 #if DEBUG
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #define LOG_FUNCTION do { LOG("%s(), state = %d\r\n", __func__, m_mame_connection_state); } while(0)
@@ -267,7 +270,7 @@ struct WSClient : public Connected {
   }
 
   void send(const std::string &message) {
-    L(L(std::cerr << std::format("Sending '{}' to client {}", message, m_connection_number) << std::endl));
+    L(std::cerr << std::format("Sending '{}' to client {}", message, m_connection_number) << std::endl);
     send(message.data(), message.length());
   }
 };
@@ -630,7 +633,7 @@ struct Server : Connected {
   Server(const std::string &mame_direct, const std::string &mame_ws, const std::string &webroot)
   : Connected(false), m_mame_direct(mame_direct), m_mame_ws(mame_ws), m_webroot(webroot), m_mame_thread_commands() {
     if ((m_mame_thread_commands.r < 0) || (m_mame_thread_commands.w < 0)) {
-      L(std::cerr << "!!! Failed to create pipe !!!" << std::endl);
+      std::cerr << "!!! Failed to create pipe !!!" << std::endl;
       exit(1);
     }
   }
@@ -645,10 +648,10 @@ struct Server : Connected {
 
   void send_to_all_clients(const char *data, size_t len, struct mg_connection *except = nullptr) {
     lock();
-    // LOG_FUNCTION;
-    // if (data[0] != 'P') {
-    //   L(std::cerr << "send_to_all_clients('" << std::string_view(data, len) << "')" << std::endl);
-    // }
+    LOG_FUNCTION;
+    if (data[0] != 'P') {
+      L(std::cerr << "send_to_all_clients('" << std::string_view(data, len) << "')" << std::endl);
+    }
 
     for (const auto &c: m_ws_clients) {
       if (c->m_connection != except) c->send(data, len);
@@ -698,7 +701,7 @@ struct Server : Connected {
     lock();
     LOG_FUNCTION;
     if (conn != nullptr && s >= 0) {
-      L(std::cerr << "ERROR: Trying to use both TCP and Web socket connections to MAME at the same time! Ignoring" << std::endl);
+      std::cerr << "ERROR: Trying to use both TCP and Web socket connections to MAME at the same time! Ignoring" << std::endl;
     } else {
       m_mame_socket = s;
       m_mame_conn = conn;
@@ -1381,7 +1384,7 @@ void reset_termios() {
 int main(int argc, char *argv[]) {
   Pipe p;
   if (!p) {
-    L(std::cerr << std::format("Cannot create pipe: {}", strerror(errno)) << std::endl);
+    std::cerr << std::format("Cannot create pipe: {}", strerror(errno)) << std::endl;
     exit(1);
   }
 
@@ -1425,7 +1428,7 @@ int main(int argc, char *argv[]) {
         if (val.has_value()) {
           web_server_options[wi->second] = argv[i];
         } else {
-          L(std::cerr << std::format("Missing value for web server flag '{}'", arg) << std::endl);
+          std::cerr << std::format("Missing value for web server flag '{}'", arg) << std::endl;
           exit(-1);
         }
         continue;
@@ -1438,28 +1441,28 @@ int main(int argc, char *argv[]) {
           std::string s_val(val.value());
           options[s_flag] = s_val;
         } else {
-          L(std::cerr << std::format("Missing value for flag '{}'", arg) << std::endl);
+          std::cerr << std::format("Missing value for flag '{}'", arg) << std::endl;
           exit(-1);
         }
         continue;
       }
 
       if (flag.starts_with("h") || flag == "?") {
-        L(std::cerr << std::format("{} flags:", argv[0]) << std::endl);
-        L(std::cerr << "  -listening_ports <ports>     [8080]" << std::endl);
-        L(std::cerr << "  -num_threads <n>             [3]" << std::endl);
-        L(std::cerr << "  -direct    <host:port>       [localhost:1552]" << std::endl);
-        L(std::cerr << "  -websocket <host:port/path>  [localhost:8080/esqpanel/socket]" << std::endl);
-        L(std::cerr << "  -webroot <path>              [none: serve compiled-in JS & HTML]" << std::endl);
+        std::cerr << std::format("{} flags:", argv[0]) << std::endl;
+        std::cerr << "  -listening_ports <ports>     [8080]" << std::endl;
+        std::cerr << "  -num_threads <n>             [3]" << std::endl;
+        std::cerr << "  -direct    <host:port>       [localhost:1552]" << std::endl;
+        std::cerr << "  -websocket <host:port/path>  [localhost:8080/esqpanel/socket]" << std::endl;
+        std::cerr << "  -webroot <path>              [none: serve compiled-in JS & HTML]" << std::endl;
 
         exit(0);
       }
 
       // if we get here, it's not either a web server or a mame flag!
-      L(std::cerr << std::format("Unknown flag '{}'", arg) << std::endl);
+      std::cerr << std::format("Unknown flag '{}'", arg) << std::endl;
       exit(-1);
     } else {
-      L(std::cerr << std::format("Unknown argument '{}'", arg) << std::endl);
+      std::cerr << std::format("Unknown argument '{}'", arg) << std::endl;
       exit(-1);
     }
   }
@@ -1500,7 +1503,7 @@ int main(int argc, char *argv[]) {
   struct mg_context *ctx =
       mg_start2(&mg_start_init_data, &mg_start_error_data);
   if (!ctx) {
-    L(std::cerr << std::format("Cannot start server: {}\r\n", errtxtbuf) << std::endl);
+    std::cerr << std::format("Cannot start server: {}\r\n", errtxtbuf) << std::endl;
     mg_exit_library();
     return 1;
   }
@@ -1523,7 +1526,7 @@ int main(int argc, char *argv[]) {
   mg_set_request_handler(ctx, "/" ARIMO_ITALIC, serve_arimo_italic, &server);
 
   /* Let the server run. */
-  // L(std::cerr << "Websocket server running" << std::endl);
+  L(std::cerr << "Websocket server running" << std::endl);
 
 #if BYCHAR
   initscr();
