@@ -6,11 +6,6 @@ pointer_managers = {}
 file:set_resolve_tags_callback(
 	function ()
 		for view_name, view in pairs(file.views) do
-			-- Hide the warning about requiring the Layout plugin.
-			view.items["plugin_warning"]:set_state(0)
-
-			local manager = PointerManager:create(view)
-			pointer_managers[view_name] = manager
 
 --CODE--
 
@@ -340,12 +335,17 @@ local makeFindKey = function(n_octaves)
 	local full_width = octaves_width + w_white
 
 	local function find_12_key(x, y, w, h)
-		if x > octaves_width then
+		if x < 0 or full_width < x then
+			return nil
+		end
+
+		if octaves_width <= x then
 			return 12 * n_octaves
 		end
 
 		local octave, kx = math.modf((x / w) * (full_width / octave_shift))
 		if octave == n_octaves then
+			-- this should already have been taken care of by the above
 			return 12 * octave
 		end
 
@@ -399,6 +399,9 @@ end
 KeyboardHandler = {}
 
 function KeyboardHandler:create(view, clickarea_id, key_id_prefix, port_prefix, from_octave, n_octaves)
+	local from_key = 12 * from_octave
+	local n_keys = 12 * n_octaves + 1
+
 	local instance = {
 		view = view,
 		clickarea = view.items[clickarea_id],
@@ -422,10 +425,7 @@ function KeyboardHandler:create(view, clickarea_id, key_id_prefix, port_prefix, 
 		return nil
 	end
 
-	local from_key = 12 * from_octave
-	local n_keys = 12 * n_octaves + 1
-
-	for i = 0, n_keys -1 do
+	for i = 0, n_keys - 1 do
 		local key_info = k12[(i % 12) + 1]
 		local key = {
 			id = key_id_prefix .. i,
@@ -449,7 +449,7 @@ function KeyboardHandler:create(view, clickarea_id, key_id_prefix, port_prefix, 
 
 		function key:updateViewItemState()
 			if self.pressure > 0 then
-				self.item:set_state(127 + key.pressure)
+				self.item:set_state(127 + self.pressure)
 			elseif self.velocity > 0 then
 				self.item:set_state(self.velocity)
 			else
