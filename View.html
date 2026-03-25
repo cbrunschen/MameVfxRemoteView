@@ -52,12 +52,15 @@
     .keyboard {
       touch-action: none;
     }
+
+    .panel_type {
+      margin-bottom: 5px;
+    }
   </style>
 </head>
-<body onload="prepare();" bgcolor="black" class="notranslate">
-  <div><select id="panel_type"></select></div>
-  <div id="container" width="100%" height="100%">
-  </div>
+<body onload="prepare();" bgcolor="#111" class="notranslate">
+  <div class="panel_type"><select id="panel_type"></select></div>
+  <div id="container" width="100%" height="100%"></div>
 
   <div width="0" height="0"><canvas id="measure" width="0" height="0"></canvas></div>
 </body>
