@@ -83,7 +83,7 @@ for i in range(12):
 
 
 # calculate the width a number of octaves,
-# _not_ including an extra 'C' above or sorrounding kerf
+# _not_ including an extra 'C' above or any surrounding kerf
 def w_oct(i):
   return (w_white + 2 * kerf_x_ww) * (7 * i) - kerf_x_ww
 
@@ -246,8 +246,7 @@ class KeyShaper:
     ]
   
   def make_find_key_lua(self):
-    octave_shift = tf(self.octave_shift())
-    # dprint(f'{octave_shift=}')
+    # dprint(f'octave_shift={tf(self.octave_shift())}')
 
     actual_12_intervals = [(i, (tf(a), tf(b))) for i,(a,b) in enumerate(relative_intervals)]
     # dprint(f'{actual_12_intervals=}')
