@@ -294,6 +294,14 @@ class ViewBuilder:
     self.addLabel(47.5, self.accent_line_label_y, 35, "Data Entry", self.accent_line_font)
 
     return self.endGroup()
+  
+  def addDisplayOnly(self, offset: Vector|None = None):
+    self.beginGroup("DisplayOnly", offset)
+    charRect = Rect(0, 0, 342, 572)
+    charsRect = Rect(0, 0, 40 * charRect.w, 2 * charRect.h)
+    self.add(Rectangle(charsRect, 'glass'))
+    self.add(Display(charsRect))
+    return self.endGroup()
 
   def addDisplayArea(self, offset: Vector|None = None):
     self.beginGroup("DisplayAndButtons", offset)
@@ -611,6 +619,16 @@ class ViewBuilder:
   
   def addWhiteLineAround(self, label:Label, thickness:float = 0.25):
     return self.add(WhiteLineAround(label, thickness))
+
+
+class DisplayOnlyViewBuilder(ViewBuilder):
+  def __post_init__(self):
+    super().__post_init__()
+    self.view.is_interactive = False
+
+  def build(self):
+    self.addDisplayOnly()
+    return self.view
 
 
 class PanelViewBuilder(ViewBuilder):
