@@ -802,9 +802,9 @@ class Key {
     }
   }
 
-  maybeDown() { if (this.onDown != null) this.onDown(this.velocity); }
-  maybePress() { if (this.onPress != null) this.onPress(this.pressure); }
-  maybeUp() { if (this.onUp != null) this.onUp(); }
+  maybeDown() { if (this.onDown != null) this.onDown(this); }
+  maybePress() { if (this.onPress != null) this.onPress(this); }
+  maybeUp() { if (this.onUp != null) this.onUp(this); }
 
   static valueWithin(pos, top, bottom, mn, mx) {
     const d = mx - mn;
@@ -5215,23 +5215,23 @@ class Connector {
   }
   populateDisplayView(hasSeq, isSd1, isSd132) {
     // Starting group 'DisplayOnly' at offset 0,0
-    this.addRectangle(0, 0, 13680, 1144, Colors.GLASS);
+    this.addRectangle(11, 30.75936, 223, 20.48129, Colors.GLASS);
 
     this.displayContainer = createElement("svg");
     this.display = new Display(this.displayContainer, 2, 40, "real");
     this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    this.displayContainer.setAttribute("x", 0);
-    this.displayContainer.setAttribute("y", 0);
-    this.displayContainer.setAttribute("width", 13680);
-    this.displayContainer.setAttribute("height", 1144);
+    this.displayContainer.setAttribute("x", 12.0);
+    this.displayContainer.setAttribute("y", 32.5093567251462);
+    this.displayContainer.setAttribute("width", 221.0);
+    this.displayContainer.setAttribute("height", 18.481286549707605);
     this.root.appendChild(this.displayContainer);
 
     // Ending group 'DisplayOnly'
     this.root.setAttribute("x", "0mm");
     this.root.setAttribute("y", "0mm");
-    this.root.setAttribute("width", "13680mm");
-    this.root.setAttribute("height", "1144mm");
-    this.root.setAttribute("viewBox", "0 0 13680 1144");
+    this.root.setAttribute("width", "223.0mm");
+    this.root.setAttribute("height", "20.481286549707605mm");
+    this.root.setAttribute("viewBox", "11.0 30.759356725146198 223.0 20.481286549707605");
   }
   populateView(view, hasSeq, isSd1, isSd132) {
     if (view == 0) return this.populateFullView(hasSeq, isSd1, isSd132);
