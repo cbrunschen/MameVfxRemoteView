@@ -13,6 +13,6 @@ cmake \
   -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}           \
   -S . -B ${OUT} \
 && \
-cmake --build ${OUT} -- \
+cmake --build ${OUT} -- -j16 \
 && \
 ${OUT}/MameVfxRemoteView $@
