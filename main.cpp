@@ -3,6 +3,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -11,6 +12,7 @@
 #include <mutex>
 #include <spanstream>
 #include <sstream>
+#include <string>
 #include <string_view>
 #include <thread>
 #include <unordered_map>
@@ -41,16 +43,15 @@
 #define ARIMO "fonts/Arimo.ttf"
 #define ARIMO_ITALIC "fonts/Arimo-Italic.ttf"
 
-#ifndef DEBUG
-#define DEBUG 0
-#endif
+#define DEBUG_GEN (1)
+#define DEBUG_DC (2)
 
 #if DEBUG
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #define LOG_FUNCTION do { LOG("%s(), state = %d\r\n", __func__, m_mame_connection_state); } while(0)
 #define L(...) do { __VA_ARGS__; }while(0)
-#if DEBUG > 1
-#define LOGD(...) fprintf(stderr, __VA_ARGS__)
+#if DEBUG & LOG_DC
+#define LOGDC(...) fprintf(stderr, __VA_ARGS__)
 #endif
 #else // DEBUG
 #define LOG(...) do{}while(0)
@@ -58,7 +59,7 @@
 #define L(...) do{}while(0)
 #endif // DEBUG
 #ifndef LOGD
-#define LOGD(...) do{}while(0)
+#define LOGDC(...) do{}while(0)
 #endif
 
 #if USE_SSL
@@ -414,12 +415,12 @@ struct Display {
 
   void handle_display_char(uint8_t c) {
     if (0x20 <= c && c < 0x7f)
-      LOGD("HDC %02x '%c': ", c, c);
+      LOGDC("HDC %02x '%c': ", c, c);
     else
-      LOGD("HDC %02x    : ", c);
+      LOGDC("HDC %02x    : ", c);
 
     if (calib) {
-      LOGD("skipping next byte after calibration\r\n");
+      LOGDC("skipping next byte after calibration\r\n");
       calib = false;
     } else if (light) {
       int light_number = c & 0x3f;
@@ -427,97 +428,110 @@ struct Display {
       auto light_state = (c & 0xc0) >> 6;
       light_states[light_number] = light_state;
 
-      LOGD(" - %d %d\r\n", light_number, light_state);
+      LOGDC(" - %d %d\r\n", light_number, light_state);
       send(std::format("L {:d} {:d}", light_number, light_state));
       light = false;
     } else if ((0x80 <= c) && (c < 0xd0)) {
       // move cursor to position
       row = ((c & 0x7f) >= 40) ? 1 : 0;
       col = (c & 0x7f) % 40;
-      LOGD("%02x: -> (%d, %d)\r\n", c, row, col);
+      LOGDC("%02x: -> (%d, %d)\r\n", c, row, col);
     } else if (0xd0 <= c) {
       // single-byte commands
       switch (c) {
         case 0xd0:  // blink start
-          LOGD("d0: blink\r\n");
+          LOGDC("d0: blink\r\n");
           attr |= ATTR_BLINK;
           break;
 
         case 0xd1:  // cancel all attributes
-          LOGD("d1: cancel attributes\r\n");
+          LOGDC("d1: cancel attributes\r\n");
           attr = 0;
           break;
 
         case 0xd2:  // blinking underline
-          LOGD("d2: blinking underline\r\n");
+          LOGDC("d2: blinking underline\r\n");
           attr |= ATTR_BLINK | ATTR_UNDERLINE;
           break;
 
         case 0xd3:  // underline
-          LOGD("d3: underline\r\n");
+          LOGDC("d3: underline\r\n");
           attr |= ATTR_UNDERLINE;
           break;
 
         case 0xd4:  // move curser one step right
-          LOGD("d4: right %d", col);
+          LOGDC("d4: right %d", col);
           move_right();
-          LOGD(" -> %d\r\n", col);
+          LOGDC(" -> %d\r\n", col);
           break;
 
           case 0xd5:  // move curser one step left
-          LOGD("d5: left  %d", col);
+          LOGDC("d5: left  %d", col);
           move_left();
-          LOGD(" -> %d\r\n", col);
+          LOGDC(" -> %d\r\n", col);
           break;
 
         case 0xd6:  // clear screen
-          LOGD("d6: clear screen\r\n");
+          LOGDC("d6: clear screen\r\n");
           clear_screen();
+          break;
+
+        case 0xd9:  // underline current character
+          attrs[row][col] |= ATTR_UNDERLINE;
+          LOGDC("d9: set underline at (%d,%d)\r\n", row, col);
+          send(std::format("DC {:d} {:d} {:02x} {:1x}", row, col, chars[row][col], attrs[row][col]));
+          break;
+
+        case 0xdb:  // de-underline current character
+          attrs[row][col] &= ~ATTR_UNDERLINE;
+          LOGDC("db: clear underline at (%d,%d)rr\n", row, col);
+          send(std::format("DC {:d} {:d} {:02x} {:1x}", row, col, chars[row][col], attrs[row][col]));
           break;
         
         case 0xe8:  // also cancel attributes
           attr = 0;
-          LOGD("e8: cancel attributes (e8)\n");
+          LOGDC("e8: cancel attributes (e8)\n");
           break;
 
         case 0xf5:  // save cursor position
-          LOGD("f5: save pos (%d, %d)\r\n", row, col);
+          LOGDC("f5: save pos (%d, %d)\r\n", row, col);
           saved_col = col;
           saved_row = row;
+          attr = 0;
           break;
 
         case 0xf6:  // restore cursor position
-          LOGD("f6: restore pos (%d, %d)", row, col);
+          LOGDC("f6: restore pos (%d, %d)", row, col);
           col = saved_col;
           row = saved_row;
-          LOGD(" -> (%d, %d)\r\n", row, col);
           attr = attrs[row][col];
+          LOGDC(" -> (%d, %d) [%x]\r\n", row, col, attr);
           break;
 
         case 0xfb: // request calibration
-          LOGD("0xff: calibration\r");
+          LOGDC("0xff: calibration\r");
           calib = true;
           break;
 
         case 0xfd: // also clear screen?
-          LOGD("fd: clear screen\r\n");
+          LOGDC("fd: clear screen\r\n");
           clear_screen();
           break;
 
         case 0xff:
-          LOGD("0xff: light\r\n");
+          LOGDC("0xff: light\r\n");
           // button light state command
           light = true;
           break;
 
         default:
           char cx = chars[row][col];
-          LOGD("Unknown control code %02x (@ %d, %d, %02x '%c')\r\n", c, row, col, cx, cx);
+          LOGDC("Unknown control code %02x (@ %d, %d, %02x '%c')\r\n", c, row, col, cx, cx);
           break;
       }
     } else if ((0x20 <= c) && (c < 0x7f)) {
       // a character to display
-      LOGD("[char %02x] '%c' (attr %x)\r\n", c, c, attr);
+      LOGDC("[char %02x] '%c' (attr %x)\r\n", c, c, attr);
       chars[row][col] = c;
       attrs[row][col] = attr;
 
@@ -527,10 +541,10 @@ struct Display {
     } else if (c == 0x7f) {
       // DEL character -> move one step right? Nope - cursor just moves past column 39,
       // perhaps onto column 0 on the next row!
-      LOGD("7f: Unknown function\r\n");
+      LOGDC("7f: Unknown function\r\n");
     } else {
       char c = chars[row][col];
-      LOGD("Unknown character code %02x (@ %d, %d, %02x '%c')\r\n", c, row, row, c, c);
+      LOGDC("Unknown character code %02x (@ %d, %d, %02x '%c')\r\n", c, row, row, c, c);
     }
   }
 };
@@ -648,7 +662,7 @@ struct Server : Connected {
 
   void send_to_all_clients(const char *data, size_t len, struct mg_connection *except = nullptr) {
     lock();
-    LOG_FUNCTION;
+    // LOG_FUNCTION;
     if (data[0] != 'P') {
       L(std::cerr << "send_to_all_clients('" << std::string_view(data, len) << "')" << std::endl);
     }

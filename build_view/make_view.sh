@@ -8,7 +8,7 @@ PRG="${DIR}/build_view.py"
 # Activate the virtual environment
 . ${DIR}/.venv/bin/activate
 
-OPTS=(--text-paths --segments=real --real-logos) # --debug)
+OPTS=(--text-paths --segments=real --real-logos --include-display-only) # --debug)
 
 # By default, output the build_view's parent directory
 OUTPUT="$(dirname ${DIR})"

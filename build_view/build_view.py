@@ -23,6 +23,7 @@ def main():
   parser.add_argument('-s', '--segments', choices=['default','straight','real'], default='default')
   parser.add_argument('-D', '--debug', action='store_true', default=False)
   parser.add_argument('-tr', '--text-renderer', choices=render.choices, default=render.choices[0])
+  parser.add_argument('-ido', '--include-display-only', action=BooleanOptionalAction, default=False)
   # parser.add_argument('-fs', '--fontsize', default=1.4)
 
   args = parser.parse_args()
@@ -49,8 +50,10 @@ def main():
     'Compact': CompactViewBuilder,
     'Panel': PanelViewBuilder,
     'Tablet': TabletViewBuilder,
-    'Display': DisplayOnlyViewBuilder,
   }
+
+  if args.include_display_only:
+    views['Display'] = DisplayOnlyViewBuilder
   
   if visitor:
     for name, builder_class in views.items():
