@@ -39,12 +39,15 @@ class MameLayoutDestination:
 
 class MameLayoutVisitor(ViewVisitor):
   def __init__(self, 
-               keyboard: str, io: str = '', 
+               keyboard: str, 
+               io_prefix: str = '',
+               vfd_prefix: str = '',
                fonts: bool = False, 
                hexcolors: bool = False,
                text_paths: bool = False,
                segments: str = 'default'):
-    self.io = io
+    self.io_prefix = io_prefix
+    self.vfd_prefix = vfd_prefix
     self.fonts = fonts
     self.hexcolors = hexcolors
     self.text_paths = text_paths
@@ -186,7 +189,7 @@ class MameLayoutVisitor(ViewVisitor):
             self.layout_increment('n', '~s~', '1'),
             self.layout_increment('x', '0', '342'),
             Space(),
-            self.layout_param('input', 'vfd~n~'),
+            self.layout_param('input', f'{self.vfd_prefix}vfd~n~'),
             self.layout_group(ref='vfd_cell', contents=[
               self.layout_tag('bounds', x='~x~', y='~y~', width='342', height='572')
             ])
@@ -804,7 +807,7 @@ class MameLayoutVisitor(ViewVisitor):
     self.visitRectangle(Rectangle(r1, 'white'))
 
   def ioport(self, port):
-    return f'{self.io}{port}'
+    return f'{self.io_prefix}{port}'
 
   def __str__(self):
     layout = Element('mamelayout', {'version':'2'})

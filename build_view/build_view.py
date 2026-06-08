@@ -16,6 +16,7 @@ def main():
   group.add_argument('-l', '--layout', choices=['vfx','vfxsd','sd1','sd132'])
   group.add_argument('-js', '--javascript', action='store_true')
   parser.add_argument('-io', '--io-port-prefix', type=str, default="")
+  parser.add_argument('-vp', '--vfd-prefix', type=str, default="")
   parser.add_argument('-rl', '--real-logos', action=BooleanOptionalAction, default=False)
   parser.add_argument('-f', '--fonts', action=BooleanOptionalAction, default=False)
   parser.add_argument('-hc', '--hexcolors', action=BooleanOptionalAction, default=False)
@@ -38,7 +39,9 @@ def main():
     )
   elif args.layout:
     visitor = MameLayoutVisitor(
-      args.layout, args.io_port_prefix, 
+      args.layout,
+      args.io_port_prefix, 
+      args.vfd_prefix,
       fonts=args.fonts, 
       hexcolors=args.hexcolors, 
       text_paths=args.text_paths,

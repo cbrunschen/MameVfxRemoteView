@@ -30,7 +30,7 @@ shift $(($OPTIND - 1))
 
 for K in vfx vfxsd sd1 sd132; do
   mkdir -p "${OUTPUT}/${K}"
-  ${PRG} -l ${K} -io 'panel:' ${OPTS[@]} $@ > "${OUTPUT}/${K}/${K}.lay"
+  ${PRG} -l ${K} -io 'panel:' -vp '' ${OPTS[@]} $@ > "${OUTPUT}/${K}/${K}.lay"
   if [[ $COMPRESS = "true" ]]; then
     pushd "${OUTPUT}"
     zip -r "${K}.zip" "${K}"

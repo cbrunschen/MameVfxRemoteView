@@ -26,5 +26,5 @@ done
 shift $(($OPTIND - 1))
 
 for K in vfx vfxsd sd1 sd132; do
-  ${PRG} -l ${K} ${OPTS[@]} $@ > "${OUTPUT}/${K}.lay"
+  ${PRG} -l ${K} -io '' -vp 'vfd:' ${OPTS[@]} $@ > "${OUTPUT}/${K}.lay"
 done
