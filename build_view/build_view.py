@@ -15,6 +15,7 @@ def main():
   group = parser.add_mutually_exclusive_group()
   group.add_argument('-l', '--layout', choices=['vfx','vfxsd','sd1','sd132'])
   group.add_argument('-js', '--javascript', action='store_true')
+  parser.add_argument('-nf', '--name-format', type=str, default='%NAME%')
   parser.add_argument('-io', '--io-port-prefix', type=str, default="")
   parser.add_argument('-vp', '--vfd-prefix', type=str, default="")
   parser.add_argument('-rl', '--real-logos', action=BooleanOptionalAction, default=False)
@@ -57,10 +58,15 @@ def main():
 
   if args.include_display_only:
     views['Display'] = DisplayOnlyViewBuilder
+
+  name_format:str = args.name_format
+  if not '%NAME%' in name_format:
+    eprint(f'Name format \'{name_format}\' must contain name placeholder \'%NAME%\'')
   
   if visitor:
     for name, builder_class in views.items():
-      builder = builder_class(name)
+      formatted_name = name_format.replace('%NAME%', name)
+      builder = builder_class(formatted_name)
       visitor.visitView(builder.withRealLogos(args.real_logos).build())
     print(visitor)
   else:
