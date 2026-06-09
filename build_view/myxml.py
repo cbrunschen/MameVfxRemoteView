@@ -32,20 +32,32 @@ class Element:
       self.append(i)
     return self
   
-  def __str__(self):
+  def __format__(self, spec:str):
+    short = 's' in spec
     items = [ f'<{self.tag}' ]
     if self.attrs is not None:
       items.extend([f' {k}="{v}"' for (k,v) in self.attrs.items() if v is not None])
 
-    if len(self.children) > 0:
-      items.append('>\n')
-      items.extend([indent(str(child), '\t') for child in self.children])
-      items.append(f'</{self.tag}>\n')
+    n_children = len(self.children)
+    if n_children > 0:
+      if (n_children == 1) and short:
+        items.append('>')
+        child = format(self.children[0], spec).strip()
+        items.append(child)
+        items.append(f'</{self.tag}>\n')
+      else:
+        items.append('>\n')
+        items.extend([indent(format(child, spec), '\t') for child in self.children])
+        items.append(f'</{self.tag}>\n')
 
     else:
       items.append(' />\n')
     
     return ''.join(items)
+
+  def __str__(self):
+    return self.__format__('')
+
 
 @dataclass
 class CDATA:
