@@ -4,7 +4,7 @@
 # segments, but adjusted to the positioning and size of the NEC FIP80B5R
 # Vacuum Fluorescent Display's segments, and adding the Dot and Underline
 # segments.
-# All paths are polygons.
+# All paths are simple convex polygons.
 
 from sys import argv, exit
 from argparse import ArgumentParser, BooleanOptionalAction
@@ -142,6 +142,7 @@ def diagonal_segment(minx:float, maxx:float, miny:float, maxy:float, width:float
 def chamfered_rect(cx, cy, w, h, chamfer):
 	w2 = w/2
 	h2 = h/2
+	chamfer = min(w2, h2, chamfer)
 	return [
 		(cx-w2+chamfer, cy-h2),
 		(cx+w2-chamfer, cy-h2),
@@ -250,7 +251,7 @@ def straight_segments(thickness=300):
 		# Decimal Point / Dot
 		transform(shear.translate(2720, 3800 - 0.7 * thickness), chamfered_rect(0, 0, thickness, 1.4 * thickness, thickness / 3)),
 		# Underline
-		transform(shear.translate(1385, 4550), chamfered_rect(0, 0, 1850, thickness, 60)),
+		transform(shear.translate(1385, 4550), chamfered_rect(0, 0, 1850, thickness, min(60, thickness/3))),
 	]
 
 straight_segment_paths_led14seg = [pp(segment) for segment in straight_segments()]
