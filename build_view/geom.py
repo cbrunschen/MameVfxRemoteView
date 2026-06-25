@@ -155,6 +155,8 @@ class Matrix:
         tx = self.xx * m.tx + self.xy * m.ty + self.tx,
         ty = self.yx * m.tx + self.yy * m.ty + self.ty
         )
+    else:
+      return None
   
   def translate(self, tx: float, ty: float|None = None) -> 'Matrix':
     m = Matrix.translation(tx, ty)
