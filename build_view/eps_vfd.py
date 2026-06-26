@@ -105,9 +105,8 @@ def main():
 
   args = parser.parse_args()
   set_debug(args.debug)
-  render.configure(args.text_renderer)
 
-  renderer = render.make_text_renderer();
+  renderer = render.make_text_renderer(args.text_renderer);
 
   text_height = 3.5
   spacing_y = 0.2

@@ -330,11 +330,18 @@ def print_font_python(name, font):
   print("]");
    
 def print_font_c(name, font):
-  print(f"static const uint16_t{name}[] = \n")
+  print(f"static const uint16_t{name}[] = {{")
   for c in range(96):
     bits = font[c]
-    print(f"  0x{bits:04x}, // {nybble(bits >> 12)} {nybble(bits >> 8)} {nybble(bits >> 4)} {nybble(bits)} {vfx_chars[c]}")
+    print(f"  0x{bits:04x}, //  {nybble(bits >> 12)} {nybble(bits >> 8)} {nybble(bits >> 4)} {nybble(bits)} {vfx_chars[c]}")
   print("};");
+
+def print_font_js(name, font):
+  print(f"static {name} = [")
+  for c in range(96):
+    bits = font[c]
+    print(f"  0x{bits:04x}, //  {nybble(bits >> 12)} {nybble(bits >> 8)} {nybble(bits >> 4)} {nybble(bits)} {vfx_chars[c]}")
+  print("];");
 
 segment_paths_fip80b5r_order = [
   "M1053 5015 c-43 -19 -57 -47 -43 -89 23 -70 87 -106 189 -106 38 0 70 -8 106 -25 79 -39 111 -41 183 -11 80 34 119 33 205 -6 68 -31 78 -33 192 -33 116 0 123 1 195 35 67 31 87 35 182 40 101 5 108 7 137 34 40 38 50 89 25 118 -11 11 -37 29 -59 39 -37 17 -79 19 -660 18 -505 0 -626 -2 -652 -14z",
@@ -382,5 +389,5 @@ def sample():
 
 
 if __name__ == '__main__':
-  print_font_python("font_fip80b5r", font_fip80b5r)
+  print_font_js("segmentsByCharacter", font_fip80b5r)
   # sample()

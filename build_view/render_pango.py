@@ -7,6 +7,7 @@ import os
 from dataclasses import dataclass, field
 from util import Alignment, dprint, set_debug
 from renderutil import Cubic, Metrics
+import render
 
 gi.require_version("Pango", "1.0")
 from gi.repository import Pango # pyright: ignore[reportMissingModuleSource]
@@ -14,77 +15,8 @@ from gi.repository import Pango # pyright: ignore[reportMissingModuleSource]
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import PangoCairo # pyright: ignore[reportMissingModuleSource]
 
-@dataclass
-class Font:
-  family: str
-  size: float
-  metrics: Metrics
-  bold: bool = field(kw_only=True, default=False)
-  italic: bool = field(kw_only=True, default=False)
 
-  def __post_init__(self):
-    dprint(f'Created: {str(self)}')
-
-  @property
-  def scale(self):
-    return self.metrics.scale
-
-  @property
-  def text_height(self):
-    return self.metrics.text_height
-
-  @property
-  def text_up(self):
-    return self.metrics.text_up
-
-  @property
-  def above_text(self):
-    return self.metrics.above_text
-
-  @property
-  def ascent(self):
-    return self.metrics.ascent
-
-  @property
-  def descent(self):
-    return self.metrics.descent
-
-  @property
-  def top(self):
-    return self.metrics.top
-
-  @property
-  def height(self):
-    return self.metrics.height
-
-  @property
-  def baseline(self):
-    return self.metrics.baseline  
-
-  def scaleFor(self, get, target: float):
-    return self.metrics.scaleFor(get, target)
-  
-  def scaledTo(self, get, target: float):
-    scale = self.scaleFor(get, target)
-    return Font(self.family, self.size * scale, self.metrics * scale, bold=self.bold, italic=self.italic)
-
-  def scaleTo(self, get, target:float):
-    scale = self.scaleFor(get, target)
-    self.size = self.size * scale
-    self.metrics = self.metrics * scale
-    return self
-
-  def scaledToHeight(self, height: float):
-    return self.scaledTo('height', height)
-
-  def scaledToCapHeight(self, cap_height):
-    return self.scaledTo('cap_height', cap_height)
-
-  def scaledToTextHeight(self, text_height):
-    return self.scaledTo('text_height', text_height)
-
-  def scaledToAscent(self, ascent):
-    return self.scaledTo('ascent', ascent)
+Font = render.Font
 
 
 class TextRenderer:
@@ -219,10 +151,10 @@ class TextRenderer:
 
 
   def getFont(self, family: str, bold: bool = False, italic: bool = False):
-    return Font(self.getFamily(family), 1.0, metrics=self.metrics(family, bold=bold, italic=italic).scaledToTextHeight(1.0), bold=bold, italic=italic)
+    return render.Font(self.getFamily(family), 1.0, metrics=self.metrics(family, bold=bold, italic=italic).scaledToTextHeight(1.0), bold=bold, italic=italic)
 
 
-  def textWidth(self, s: str, f: Font):
+  def textWidth(self, s: str, f: render.Font):
     font_family = self.getFamily(f.family)
     dprint(f"textWidth for '{font_family}'")
 
@@ -253,7 +185,7 @@ class TextRenderer:
       return f.scale * ink.width
 
 
-  def textPath(self, s: str,  w: float, f: Font, alignment: Alignment = Alignment.CENTERED):
+  def textPath(self, s: str,  w: float, f: render.Font, alignment: Alignment = Alignment.CENTERED):
     font_family = self.getFamily(f.family)
     dprint(f"textPath for '{s}' in '{font_family}'")
 

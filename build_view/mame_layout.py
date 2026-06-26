@@ -8,7 +8,7 @@ from myxml import *
 from mysvg import *
 from vfd import segment_paths_led14seg_order
 from straight_segments import straight_segment_paths_led14seg
-from render import make_text_renderer
+from render import TextRenderer
 
 @dataclass
 class MameLayoutDestination:
@@ -38,7 +38,8 @@ class MameLayoutDestination:
     return result
 
 class MameLayoutVisitor(ViewVisitor):
-  def __init__(self, 
+  def __init__(self,
+               text_renderer: TextRenderer,
                keyboard: str, 
                io_prefix: str = '',
                vfd_prefix: str = '',
@@ -46,15 +47,15 @@ class MameLayoutVisitor(ViewVisitor):
                hexcolors: bool = False,
                text_paths: bool = False,
                segments: str = 'default'):
+    self.text_renderer = text_renderer
+    self.keyboard = keyboard
     self.io_prefix = io_prefix
     self.vfd_prefix = vfd_prefix
     self.fonts = fonts
     self.hexcolors = hexcolors
     self.text_paths = text_paths
-    self.text_renderer = make_text_renderer()
     self.segments = segments
 
-    self.keyboard = keyboard
     self.conditions = {
       'hasSeq': keyboard.find('sd') >= 0,
       'isSd1': keyboard.find('sd1') >= 0,

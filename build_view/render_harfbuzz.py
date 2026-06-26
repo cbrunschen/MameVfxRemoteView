@@ -7,83 +7,22 @@ from textwrap import dedent
 from dataclasses import dataclass, field
 from util import Alignment, dprint, set_debug
 from renderutil import Metrics, PathBuilder, ti
+import render
       
 
 @dataclass
-class Font:
+class Font(render.Font):
   font: hb.Font # type: ignore
-  family: str
-  size: float
-  metrics: Metrics
-  bold: bool = field(kw_only=True, default=False)
-  italic: bool = field(kw_only=True, default=False)
 
   def __post_init__(self):
     dprint(f'Created: {str(self)}')
-
-  @property
-  def scale(self):
-    return self.metrics.scale
-
-  @property
-  def text_height(self):
-    return self.metrics.text_height
-
-  @property
-  def text_up(self):
-    return self.metrics.text_up
-
-  @property
-  def above_text(self):
-    return self.metrics.above_text
-
-  @property
-  def ascent(self):
-    return self.metrics.ascent
-
-  @property
-  def descent(self):
-    return self.metrics.descent
-
-  @property
-  def top(self):
-    return self.metrics.top
-
-  @property
-  def height(self):
-    return self.metrics.height
-
-  @property
-  def baseline(self):
-    return self.metrics.baseline  
-
-  def scaleFor(self, get, target: float):
-    return self.metrics.scaleFor(get, target)
   
-  def scaledTo(self, get, target: float):
+  def scaledTo(self, get, target: float) -> Font:
     scale = self.scaleFor(get, target)
-    return Font(self.font, self.family, self.size * scale, self.metrics * scale, bold=self.bold, italic=self.italic)
-
-  def scaleTo(self, get, target:float):
-    scale = self.scaleFor(get, target)
-    self.size = self.size * scale
-    self.metrics = self.metrics * scale
-    return self
-
-  def scaledToHeight(self, height: float):
-    return self.scaledTo('height', height)
-
-  def scaledToCapHeight(self, cap_height):
-    return self.scaledTo('cap_height', cap_height)
-
-  def scaledToTextHeight(self, text_height):
-    return self.scaledTo('text_height', text_height)
-
-  def scaledToAscent(self, ascent):
-    return self.scaledTo('ascent', ascent)
+    return Font(self.family, self.size * scale, self.metrics * scale, self.font, bold=self.bold, italic=self.italic)
 
 
-class TextRenderer:
+class TextRenderer(render.TextRenderer):
   file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
   font_map = { 
     'Arimo' : {
@@ -148,7 +87,6 @@ class TextRenderer:
     path = self.pathForText(s, font).tf(1, -1, 0, baseline)
     return path.bbox()
 
-
   def metrics(self, font: hb.Font): # type: ignore
     extents = font.get_font_extents('ltr')
 
@@ -173,7 +111,6 @@ class TextRenderer:
     dprint(f'metrics = {result}')
     return result
 
-
   def getFont(self, family: str, bold: bool = False, italic: bool = False):
     weight = 700 if bold else 400
     family = self.getFamily(family)
@@ -188,8 +125,7 @@ class TextRenderer:
         dprint(f'Setting font weight to {weight}')
         font.set_variation(info.tag, weight)
 
-    return Font(font, family, 1.0, metrics=self.metrics(font).scaledToTextHeight(1.0), bold=bold, italic=italic)
-  
+    return Font(family, 1.0, self.metrics(font).scaledToTextHeight(1.0), font, bold=bold, italic=italic)
 
   def widthForText(self, s:str, f: hb.Font): # type: ignore
     buf = hb.Buffer() # type: ignore
@@ -201,12 +137,15 @@ class TextRenderer:
 
     return sum(pos.x_advance for pos in buf.glyph_positions)
 
+  def textWidth(self, s: str, f: render.Font) -> float:
+    if isinstance(f, Font):
+      return f.scale * self.widthForText(s, f.font)
+    raise ValueError
 
-  def textWidth(self, s: str, f: Font):
-    return f.scale * self.widthForText(s, f.font)
+  def textPath(self, s: str,  w: float, f: render.Font, alignment: Alignment = Alignment.CENTERED) -> tuple[float, float, str]:
+    if not isinstance(f, Font):
+      raise ValueError
 
-
-  def textPath(self, s: str,  w: float, f: Font, alignment: Alignment = Alignment.CENTERED):
     dprint(f"textPath for '{s}' in '{f.family}'")
 
     extents = f.font.get_font_extents('ltr')

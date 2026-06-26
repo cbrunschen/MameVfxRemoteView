@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from colors import colors
 from view import *
 from util import fnum
-from render import make_text_renderer
+from render import TextRenderer
 
 @dataclass
 class HTMLJSView:
@@ -16,16 +16,17 @@ class HTMLJSVisitor(ViewVisitor):
 
   def __init__(
       self,
+      text_renderer: TextRenderer,
       text_paths: bool = False,
       segments: str = 'real'
     ):
+    self.text_renderer = text_renderer
     self.text_paths = text_paths
     self.segments = segments if segments in {'real','straight'} else 'straight'
     self.indent = '    '
     self.defs: dict[str, str] = {}
     self.views: list[HTMLJSView] = []
     self.offset: Vector = Vector(0, 0)
-    self.text_renderer = make_text_renderer()
 
   
   @property

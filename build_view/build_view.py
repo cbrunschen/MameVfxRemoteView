@@ -30,16 +30,18 @@ def main():
 
   args = parser.parse_args()
   util.set_debug(args.debug)
-  render.configure(args.text_renderer)
+  text_renderer = render.make_text_renderer(args.text_renderer)
 
   visitor = None
   if args.javascript:
     visitor = HTMLJSVisitor(
+      text_renderer,
       text_paths=args.text_paths,
       segments=args.segments
     )
   elif args.layout:
     visitor = MameLayoutVisitor(
+      text_renderer,
       args.layout,
       args.io_port_prefix, 
       args.vfd_prefix,
@@ -66,7 +68,7 @@ def main():
   if visitor:
     for name, builder_class in views.items():
       formatted_name = name_format.replace('%NAME%', name)
-      builder = builder_class(formatted_name)
+      builder = builder_class(formatted_name, text_renderer)
       visitor.visitView(builder.withRealLogos(args.real_logos).build())
     print(visitor)
   else:
