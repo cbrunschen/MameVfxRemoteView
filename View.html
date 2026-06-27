@@ -53,13 +53,16 @@
       touch-action: none;
     }
 
-    .panel_type {
+    .choices {
       margin-bottom: 5px;
     }
   </style>
 </head>
 <body onload="prepare();" bgcolor="#111" class="notranslate">
-  <div class="panel_type"><select id="panel_type"></select></div>
+  <div class="choices">
+    <select id="panel_type"></select>
+    <select id="segment_type"></select>
+  </div>
   <div id="container" width="100%" height="100%"></div>
 
   <div width="0" height="0"><canvas id="measure" width="0" height="0"></canvas></div>
@@ -75,23 +78,56 @@ function wsroot() {
   return (l.startsWith("https") ? "wss" : "ws") + l.substring(l.indexOf(':'), l.lastIndexOf('/')) + "/socket";
 }
 
+function populateSelect(select, options) {
+  while (select.lastChild) {
+    select.removeChild(select.lastChild);
+  }
+  options.forEach((element, index) => {
+    var option = document.createElement('option');
+    option.value = index;
+    option.text = element;
+    select.appendChild(option);
+  });
+}
+
 function changePanelType(e) {
   console.log("Changing panel type: ");
   console.log(e);
   connector.selectView(e.target.value);
 }
 
+function changeSegmentType(e) {
+  console.log("Changing segment type: ");
+  console.log(e);
+  connector.selectSegments(e.target.value);
+}
+
 function prepare() {
   panelTypeSelect = document.getElementById("panel_type");
-  panelTypeSelect.onchange = changePanelType;
+  segmentTypeSelect = document.getElementById("segment_type");
 
   console.log("Creating Connector");
   connector = new Connector(wsroot(), '$keyboard$', '$version$');
-  console.log("Have Connector, poulating view options");
-  connector.populateViewOptions(panelTypeSelect);
 
-  console.log("Selecting view at index 0");
-  connector.selectView(0);
+  console.log("Have Connector, poulating panel types");
+  populateSelect(panelTypeSelect, connector.viewOptions());
+  panelTypeSelect.onchange = changePanelType;
+
+  console.log("Have Connector, poulating segment types");
+  const segmentOptions = connector.segmentOptions();
+  populateSelect(segmentTypeSelect, segmentOptions);
+  console.log("have " + segmentOptions.length + " segment options");
+  segmentTypeSelect.onchange = changeSegmentType;
+  if (segmentOptions.length <= 1) {
+    console.log("hiding segment type select");
+    segmentTypeSelect.style.display = "none";
+  } else {
+    console.log("showing segment type select");
+    segmentTypeSelect.style.display = "";
+  }
+
+  console.log("(Re)building view at index 0 with segments at index 0");
+  connector.rebuildView(0, 0);
   container.appendChild(connector.root);
   connector.showMessage("Connecting to server...");
 }

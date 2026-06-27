@@ -10,7 +10,7 @@ PRG="${DIR}/build_view.py"
 # Activate the virtual environment
 . ${DIR}/.venv/bin/activate
 
-OPTS=(--text-paths --segments=real --real-logos --include-display-only --name-format "* %NAME%") # --debug)
+OPTS=(--text-paths --segments=straight --segments=real --real-logos --include-display-only --name-format "* %NAME%") # --debug)
 
 COMPRESS=true
 OUTPUT=artwork

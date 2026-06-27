@@ -1709,10 +1709,18 @@ class Connector {
   }
 
   selectView(view) {
+    this.rebuildView(view, this.segments);
+  }
+
+  selectSegments(segments) {
+    this.rebuildView(this.view, segments);
+  }
+
+  rebuildView(view, segments) {
     var oldDisplay = this.display;
     var oldLights = this.lights;
 
-    this.populate(this.model, view);
+    this.populate(this.model, view, segments);
 
     if (this.serverMessage != null) {
       this.showMessage(this.serverMessage);
@@ -1743,7 +1751,7 @@ class Connector {
     }
   }
 
-  populate(keyboard, view) {
+  populate(keyboard, view, segments) {
     // Remove all existing children
     while (this.root.lastChild) {
       this.root.removeChild(this.root.lastChild);
@@ -1752,6 +1760,7 @@ class Connector {
     // Note the current keyboard and view
     this.model = keyboard;
     this.view = view;
+    this.segments = segments;
 
     // console.log("Getting font size factors:");
     this.fontSizeFactors = {
@@ -1842,8 +1851,6 @@ class Connector {
 
     this.root.appendChild(this.messageBox);
   }
-
-
 
   startConnection() {
     this.needRefresh = true;
@@ -2026,7 +2033,7 @@ class Connector {
     } else if (model != this.model) {
       // we need to rebuild the panel, but can stay on the same software, no need to reload.
       console.log("Rebuilding the panel in place");
-      this.populate(model, this.view);
+      this.populate(model, this.view, this.segments);
       this.sendString("CA0B0L0D0"); // Send me nothing
       this.sendString("CA1B1L1D1"); // Send me analog data, buttons, and display data - ie refresh everything
     } else {

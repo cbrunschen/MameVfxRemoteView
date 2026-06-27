@@ -37,6 +37,41 @@ class MameLayoutDestination:
     result.extend(self.groups)
     return result
 
+
+@dataclass
+class SegmentConfiguration:
+  kind: str
+
+  @property
+  def id_suffix(self):
+    return f'_{self.kind}'
+
+  @property
+  def name_suffix(self):
+    return f' ({self.kind.title()})'
+
+
+segment_configurations = { 
+  sc.kind : sc for sc in [
+    SegmentConfiguration('default'),
+    SegmentConfiguration('straight'),
+    SegmentConfiguration('real'),
+  ] 
+}
+
+@dataclass
+class Configuration:
+  segments: SegmentConfiguration
+
+  @property 
+  def id_suffix(self):
+    return self.segments.id_suffix
+
+  @property 
+  def name_suffix(self):
+    return self.segments.name_suffix
+
+
 class MameLayoutVisitor(ViewVisitor):
   def __init__(self,
                text_renderer: TextRenderer,
@@ -46,7 +81,7 @@ class MameLayoutVisitor(ViewVisitor):
                fonts: bool = False, 
                hexcolors: bool = False,
                text_paths: bool = False,
-               segments: str = 'default'):
+               segments: list[str] = ['default']):
     self.text_renderer = text_renderer
     self.keyboard = keyboard
     self.io_prefix = io_prefix
@@ -54,7 +89,11 @@ class MameLayoutVisitor(ViewVisitor):
     self.fonts = fonts
     self.hexcolors = hexcolors
     self.text_paths = text_paths
-    self.segments = segments
+    self.segments = list(set(segments))
+    if len(self.segments) == 0:
+      self.segments = ['default']
+    self.configurations = [Configuration(segment_configurations[segs]) for segs in self.segments]
+    self.configuration = self.configurations[0]
 
     self.conditions = {
       'hasSeq': keyboard.find('sd') >= 0,
@@ -127,77 +166,85 @@ class MameLayoutVisitor(ViewVisitor):
     ]}
 
     vfd_definitions = []
-    if self.segments == 'default':
-      vfd_definitions.extend([
-        self.layout_element(name='segments', defstate='0', contents=[
-          self.layout_tag('led14seg', color='vfd_on')
-        ]),
-        self.layout_element(name='dot', defstate='0', contents=[
-          self.layout_tag('disk', statemask='0x4000', state='0', color='vfd_off'),
-          self.layout_tag('disk', statemask='0x4000', state='0x4000', color='vfd_on')
-        ]),
-        self.layout_element(name='underline', defstate='0', contents=[
-          self.layout_rect(statemask='0x8000', state='0', color='vfd_off'),
-          self.layout_rect(statemask='0x8000', state='0x8000', color='vfd_on')
-        ]),
-        self.layout_group(name='vfd_cell', bounds=Rect(0, 0, 342, 572), contents=[
-          self.layout_element(ref='segments', name='~input~', bounds=Rect(50, 69, 214, 311)),
-          self.layout_element(ref='dot', name='~input~', bounds=Rect(253, 337, 42, 42)),
-          self.layout_element(ref='underline', name='~input~', bounds=Rect(43, 444, 183, 25)),
-        ]),
-      ])
-    else:
-      segs = straight_segment_paths_led14seg if segments == 'straight' else segment_paths_led14seg_order
-      def seg(i, color, statemask, state):
-        return self.layout_svg_image(
-          str(SVGDrawing(
-            bounds, 
-            f'segment{i}', 
-            {'path': SVGPath(segs[i])}
-          ).toSvgElement()),
-          bounds=bounds,
-          color=color,
-          state=state,
-          statemask=statemask,
-        )
-
-      bounds = Rect(0, 0, 3420, 5720)
-      vfd_definitions.extend([
-        self.layout_element(name=f'segment{i}', defstate='0', contents=[
-          seg(i, 'vfd_off', statemask=f'0x{(1 << i):04x}', state='0'),
-          seg(i, 'vfd_on', statemask=f'0x{(1 << i):04x}', state=f'0x{(1 << i):04x}')
+    for kind in self.segments:
+      segconf = segment_configurations[kind]
+      id_suffix = '' if len(self.configurations) <= 1 else segconf.id_suffix
+      if kind == 'default':
+        vfd_definitions.extend([
+          self.layout_element(name='segments', defstate='0', contents=[
+            self.layout_tag('led14seg', color='vfd_on')
+          ]),
+          self.layout_element(name='dot', defstate='0', contents=[
+            self.layout_tag('disk', statemask='0x4000', state='0', color='vfd_off'),
+            self.layout_tag('disk', statemask='0x4000', state='0x4000', color='vfd_on')
+          ]),
+          self.layout_element(name='underline', defstate='0', contents=[
+            self.layout_rect(statemask='0x8000', state='0', color='vfd_off'),
+            self.layout_rect(statemask='0x8000', state='0x8000', color='vfd_on')
+          ]),
+          self.layout_group(name='vfd_cell_default', bounds=Rect(0, 0, 342, 572), contents=[
+            self.layout_element(ref='segments', name='~input~', bounds=Rect(50, 69, 214, 311)),
+            self.layout_element(ref='dot', name='~input~', bounds=Rect(253, 337, 42, 42)),
+            self.layout_element(ref='underline', name='~input~', bounds=Rect(43, 444, 183, 25)),
+          ]),
         ])
-        for i in range(16)
-      ])
-      vfd_definitions.extend([
-        self.layout_group(name='vfd_cell', bounds=Rect(0, 0, 3420, 5720), contents=[
-          self.layout_element(ref=f'segment{i}', name='~input~', bounds=bounds) for i in range(16)
-        ]),
-      ])
+      else:
+        segs = straight_segment_paths_led14seg if kind == 'straight' else segment_paths_led14seg_order
+        def seg(i, color, statemask, state):
+          return self.layout_svg_image(
+            str(SVGDrawing(
+              bounds, 
+              f'segment{i}{id_suffix}',
+              {'path': SVGPath(segs[i])}
+            ).toSvgElement()),
+            bounds=bounds,
+            color=color,
+            state=state,
+            statemask=statemask,
+          )
+
+        bounds = Rect(0, 0, 3420, 5720)
+        vfd_definitions.extend([
+          self.layout_element(name=f'segment{i}{id_suffix}', defstate='0', contents=[
+            seg(i, 'vfd_off', statemask=f'0x{(1 << i):04x}', state='0'),
+            seg(i, 'vfd_on', statemask=f'0x{(1 << i):04x}', state=f'0x{(1 << i):04x}')
+          ])
+          for i in range(16)
+        ])
+        vfd_definitions.extend([
+          self.layout_group(name=f'vfd_cell{id_suffix}', bounds=Rect(0, 0, 3420, 5720), contents=[
+            self.layout_element(ref=f'segment{i}{id_suffix}', name='~input~', bounds=bounds) for i in range(16)
+          ]),
+        ])
         
-    vfd_definitions.extend([
+    vfd_definitions.append(
       self.layout_element(name='vfd_background', contents=[
         self.layout_rect(color='black')
-      ]),
-
-      self.layout_group(name='vfd', contents=[
-        self.layout_element(ref='vfd_background', bounds=Rect(0, 0, 13680, 1144)),
-        Comment('VFDs'),
-        self.layout_tag('repeat', count=2, contents=[
-          self.layout_increment('s', '0', '40'),
-          self.layout_increment('y', '0', '572'),
-          self.layout_tag('repeat', count=40, contents=[
-            self.layout_increment('n', '~s~', '1'),
-            self.layout_increment('x', '0', '342'),
-            Space(),
-            self.layout_param('input', f'{self.vfd_prefix}vfd~n~'),
-            self.layout_group(ref='vfd_cell', contents=[
-              self.layout_tag('bounds', x='~x~', y='~y~', width='342', height='572')
-            ])
-          ]),
-        ]),
       ])
-    ])
+    )
+
+    for kind in self.segments:
+      segconf = segment_configurations[kind]
+      id_suffix = '' if len(self.configurations) <= 1 else segconf.id_suffix
+      vfd_definitions.append(
+        self.layout_group(name=f'vfd{id_suffix}', contents=[
+          self.layout_element(ref=f'vfd_background', bounds=Rect(0, 0, 13680, 1144)),
+          Comment('VFDs'),
+          self.layout_tag('repeat', count=2, contents=[
+            self.layout_increment('s', '0', '40'),
+            self.layout_increment('y', '0', '572'),
+            self.layout_tag('repeat', count=40, contents=[
+              self.layout_increment('n', '~s~', '1'),
+              self.layout_increment('x', '0', '342'),
+              Space(),
+              self.layout_param('input', f'{self.vfd_prefix}vfd~n~'),
+              self.layout_group(ref=f'vfd_cell{id_suffix}', contents=[
+                self.layout_tag('bounds', x='~x~', y='~y~', width='342', height='572')
+              ])
+            ]),
+          ]),
+        ])
+      )
 
     self.vfd_definitions = { e.attrs['name'] : e for e in vfd_definitions }
 
@@ -260,6 +307,20 @@ class MameLayoutVisitor(ViewVisitor):
   @property
   def warnings(self):
     return self.destination.warnings
+  
+  @property
+  def name_suffix(self):
+    if len(self.configurations) <= 1:
+      return ''
+    else:
+      return self.configuration.name_suffix 
+
+  @property
+  def id_suffix(self):
+    if len(self.configurations) <= 1:
+      return ''
+    else:
+      return self.configuration.id_suffix 
 
   def layout_bounds(self, bounds: Rect, state=None):
     return Element('bounds', clean({
@@ -407,6 +468,8 @@ class MameLayoutVisitor(ViewVisitor):
   def visitGroup(self, group: Group):
     dprint(f'visitGroup({group})')
 
+    id = f'{group.id}{self.id_suffix}'
+
     destination = MameLayoutDestination()
     self.destinations.append(destination)
 
@@ -417,17 +480,17 @@ class MameLayoutVisitor(ViewVisitor):
 
     self.destinations.pop()
 
-    if group.id not in self.group_definitions:
+    if id not in self.group_definitions:
       # Add a definition for this group
-      self.group_definitions[group.id] = destination
+      self.group_definitions[id] = destination
     # else, just drop it, should be identical to what's already there!
 
     # use the group, in its calculated bounds
-    self.groups.append(self.layout_group(ref=group.id, bounds=group.bounds))
+    self.groups.append(self.layout_group(ref=id, bounds=group.bounds))
 
   def visitDisplay(self, display: 'Display'):
     dprint(f'visitDisplay({display})')
-    self.vfds.append(self.layout_group(ref='vfd', bounds=display.bounds))
+    self.vfds.append(self.layout_group(ref=f'vfd{self.id_suffix}', bounds=display.bounds))
 
   def visitPatchSelectButton(self, button: 'PatchSelectButton'):
     dprint(f'visitPatchSelectButton({button})')
@@ -500,7 +563,6 @@ class MameLayoutVisitor(ViewVisitor):
     )
 
     if button.light:
-      button.light.bounds = button.light.bounds.offset(button.bounds.origin)
       button.light.accept(self)
   
   def visitLight(self, light: 'Light'):
@@ -724,32 +786,37 @@ class MameLayoutVisitor(ViewVisitor):
     )
 
   def visitView(self, view: View):
-    self.visiting = view.name
-    self.init_code[view.name] = list()    
-    dprint(f"MameLayoutVisitor visiting view '{self.visiting}'")
     self.view = view
     dprint(f'visitView({view})')
     if len(self.destinations) > 1:
       eprint(f'have more than one active destination when visiting a view!')
     elif len(self.destinations) == 1:
       dprint(f'replacing current destination {self.destinations[0]} with a new View destination')
-    destination = MameLayoutDestination(view.name)
-    self.views.append(destination)
-    self.destinations = [destination]
-    dprint(f'visiting view {view}, items = {view.items}')
-    super().visitView(view)
 
-    if (view.is_interactive):
-      # Also add the warning about the need for the layout plugin.
-      vb = view.bounds
-      w = vb.w / 1.5
-      h = w / 15
-      warning_bounds = Rect(vb.x + (vb.w - w) / 2, vb.y + (vb.h - h) / 2, w, h)
-      self.warnings.append(self.layout_element(
-        ref='plugin_warning',
-        id='plugin_warning',
-        bounds=warning_bounds,
-      ))
+    for self.configuration in self.configurations:
+      view_name = f'{view.name}{self.name_suffix}'
+      self.visiting = view_name
+      self.init_code[view_name] = list()    
+      dprint(f"MameLayoutVisitor visiting view '{self.visiting}'")
+
+      segconf = self.configuration.segments
+      destination = MameLayoutDestination(f'{view.name}{self.name_suffix}')
+      self.views.append(destination)
+      self.destinations = [destination]
+      dprint(f'visiting view {view}, items = {view.items}')
+      super().visitView(view)
+
+      if (view.is_interactive):
+        # Also add the warning about the need for the layout plugin.
+        vb = view.bounds
+        w = vb.w / 1.5
+        h = w / 15
+        warning_bounds = Rect(vb.x + (vb.w - w) / 2, vb.y + (vb.h - h) / 2, w, h)
+        self.warnings.append(self.layout_element(
+          ref='plugin_warning',
+          id=f'plugin_warning',
+          bounds=warning_bounds,
+        ))
 
   def visitShowDrawing(self, show: ShowDrawing):
     drawing = show.drawing

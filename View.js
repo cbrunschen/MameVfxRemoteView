@@ -192,15 +192,15 @@ class Display {
 
   static segmentsByCharacter = [
     0x0000, //  0000 0000 0000 0000 SPACE
-    0x7927, //  0011 1001 0010 0111 '0.'
+    0x7927, //  0111 1001 0010 0111 '0.'
     0x0028, //  0000 0000 0010 1000 '"'
-    0x4408, //  0000 0100 0000 1000 '1.'
+    0x4408, //  0100 0100 0000 1000 '1.'
     0x25e9, //  0010 0101 1110 1001 '$'
-    0x70c3, //  0011 0000 1100 0011 '2.'
+    0x70c3, //  0111 0000 1100 0011 '2.'
     0x0000, //  0000 0000 0000 0000 '&'
     0x0010, //  0000 0000 0001 0000 '''
-    0x61c3, //  0010 0001 1100 0011 '3.'
-    0x41e2, //  0000 0001 1110 0010 '4.'
+    0x61c3, //  0110 0001 1100 0011 '3.'
+    0x41e2, //  0100 0001 1110 0010 '4.'
     0x0edc, //  0000 1110 1101 1100 '*'
     0x04c8, //  0000 0100 1100 1000 '+'
     0x0000, //  0000 0000 0000 0000 ','
@@ -218,7 +218,7 @@ class Display {
     0x31e3, //  0011 0001 1110 0011 '8'
     0x21e3, //  0010 0001 1110 0011 '9'
     0x0000, //  0000 0000 0000 0000 ':'
-    0x71e1, //  0011 0001 1110 0001 '6.'
+    0x71e1, //  0111 0001 1110 0001 '6.'
     0x0204, //  0000 0010 0000 0100 '('
     0x20c0, //  0010 0000 1100 0000 '='
     0x0810, //  0000 1000 0001 0000 ')'
@@ -251,7 +251,7 @@ class Display {
     0x0414, //  0000 0100 0001 0100 'Y'
     0x2805, //  0010 1000 0000 0101 'Z'
     0x3021, //  0011 0000 0010 0001 '['
-    0x71e3, //  0011 0001 1110 0011 '8.'
+    0x71e3, //  0111 0001 1110 0011 '8.'
     0x2103, //  0010 0001 0000 0011 ']'
     0x0a00, //  0000 1010 0000 0000 '^'
     0x2000, //  0010 0000 0000 0000 '_'
@@ -1757,10 +1757,18 @@ class Connector {
   }
 
   selectView(view) {
+    this.rebuildView(view, this.segments);
+  }
+
+  selectSegments(segments) {
+    this.rebuildView(this.view, segments);
+  }
+
+  rebuildView(view, segments) {
     var oldDisplay = this.display;
     var oldLights = this.lights;
 
-    this.populate(this.model, view);
+    this.populate(this.model, view, segments);
 
     if (this.serverMessage != null) {
       this.showMessage(this.serverMessage);
@@ -1791,7 +1799,7 @@ class Connector {
     }
   }
 
-  populate(keyboard, view) {
+  populate(keyboard, view, segments) {
     // Remove all existing children
     while (this.root.lastChild) {
       this.root.removeChild(this.root.lastChild);
@@ -1800,6 +1808,7 @@ class Connector {
     // Note the current keyboard and view
     this.model = keyboard;
     this.view = view;
+    this.segments = segments;
 
     // console.log("Getting font size factors:");
     this.fontSizeFactors = {
@@ -1890,8 +1899,6 @@ class Connector {
 
     this.root.appendChild(this.messageBox);
   }
-
-
 
   startConnection() {
     this.needRefresh = true;
@@ -2074,7 +2081,7 @@ class Connector {
     } else if (model != this.model) {
       // we need to rebuild the panel, but can stay on the same software, no need to reload.
       console.log("Rebuilding the panel in place");
-      this.populate(model, this.view);
+      this.populate(model, this.view, this.segments);
       this.sendString("CA0B0L0D0"); // Send me nothing
       this.sendString("CA1B1L1D1"); // Send me analog data, buttons, and display data - ie refresh everything
     } else {
@@ -2185,27 +2192,19 @@ class Connector {
     this.defPath("L_B_mod", 0.00189, 0.00189, "M399,1067l0,854l-262,0l0,-1409l395,0l252,788q17,66 35,132.5q18,66.5 35,132.5q11,-38 21,-75.5q10,-37.5 20.5,-75.5q10.5,-38 21.5,-75l259,-827l393,0l0,1409l-262,0l0,-854q0,-29 2.5,-116.5q2.5,-87.5 7.5,-190.5q-35,134 -61.5,228q-26.5,94 -43.5,147l-254,786l-210,0l-254,-786l-107,-375q6,116 9,192.5q3,76.5 3,114.5zM2877,1379q0,263 -146,412.5q-146,149.5 -404,149.5q-253,0 -397,-150q-144,-150 -144,-412q0,-261 144,-410.5q144,-149.5 403,-149.5q265,0 404.5,144.5q139.5,144.5 139.5,415.5zM2583,1379q0,-193 -63,-280q-63,-87 -183,-87q-128,0 -192,91.5q-64,91.5 -64,275.5q0,181 62.5,275.5q62.5,94.5 180.5,94.5q130,0 194.5,-92.5q64.5,-92.5 64.5,-277.5zM3801,1921q-2,-10 -6,-42q-4,-32 -6.5,-70q-2.5,-38 -2.5,-64l-4,0q-46,98 -132,147q-86,49 -214,49q-189,0 -292,-147.5q-103,-147.5 -103,-412.5q0,-269 108.5,-415.5q108.5,-146.5 307.5,-146.5q115,0 198.5,48q83.5,48 128.5,143l2,0l-2,-178l0,-395l281,0l0,1248q0,50 2,109q2,59 6,127l-272,0zM3334,1381q0,184 55.5,276q55.5,92 165.5,92q111,0 172,-97.5q61,-97.5 61,-277.5q0,-175 -58.5,-269.5q-58.5,-94.5 -172.5,-94.5q-113,0 -168,91.5q-55,91.5 -55,279.5z", "white")
     this.defPath("L_B_patch_select", 0.00189, 0.00189, "M1296,958q0,137 -62.5,242.5q-62.5,105.5 -177.5,165q-115,59.5 -274,59.5l-350,0l0,496l-295,0l0,-1409l633,0q253,0 389.5,116.5q136.5,116.5 136.5,329.5zM999,963q0,-222 -262,-222l-305,0l0,457l313,0q122,0 188,-60.5q66,-60.5 66,-174.5zM1759,1941q-157,0 -245,-85.5q-88,-85.5 -88,-240.5q0,-168 109.5,-255q109.5,-87 317.5,-91l233,-4l0,-55q0,-106 -37,-157.5q-37,-51.5 -121,-51.5q-78,0 -114.5,35.5q-36.5,35.5 -45.5,117.5l-293,-14q55,-321 465,-321q205,0 316,101q111,101 111,287l0,394q0,91 20.5,125.5q20.5,34.5 68.5,34.5q32,0 62,-6l0,152q-52,13 -89,19.5q-37,6.5 -91,6.5q-106,0 -156.5,-52q-50.5,-52 -60.5,-153l-6,0q-59,106 -148,159.5q-89,53.5 -208,53.5zM2086,1420l-144,2q-99,5 -139,21q-41,18 -62.5,54q-21.5,36 -21.5,96q0,77 35.5,114.5q35.5,37.5 94.5,37.5q66,0 121,-36q54,-36 85,-99.5q31,-63.5 31,-134.5l0,-55zM3162,1905q-102,34 -237,34q-124,0 -191,-67.5q-67,-67.5 -67,-204.5l0,-638l-137,0l0,-190l151,0l88,-254l176,0l0,254l205,0l0,190l-205,0l0,562q0,79 30,116.5q30,37.5 93,37.5q30,0 94,-14l0,174zM3781,1941q-246,0 -380,-146.5q-134,-146.5 -134,-408.5q0,-268 135,-417.5q135,-149.5 383,-149.5q191,0 316,96q125,96 157,265l-283,14q-12,-83 -60,-132.5q-48,-49.5 -136,-49.5q-109,0 -163,90.5q-54,90.5 -54,272.5q0,187 55.5,280.5q55.5,93.5 165.5,93.5q80,0 134,-50.5q54,-50.5 67,-150.5l282,13q-15,114 -80.5,199.5q-65.5,85.5 -169.5,133q-104,47.5 -235,47.5zM4746,1055q57,-124 143,-180q86,-56 205,-56q172,0 264,106q92,106 92,310l0,686l-280,0l0,-606q0,-143 -48,-214q-48,-71 -145,-71q-102,0 -164.5,87.5q-62.5,87.5 -62.5,224.5l0,579l-281,0l0,-1484l281,0l0,405q0,36 -1,72q-1,36 -2.5,71q-1.5,35 -4.5,70l4,0zM7432,1515q0,207 -153.5,316.5q-153.5,109.5 -450.5,109.5q-535,0 -623,-387l285,-47q29,112 113,162.5q84,50.5 233,50.5q155,0 232,-47q77,-47 77,-141q0,-60 -35,-99q-35,-39 -100,-65q-32,-13 -94,-28.5q-62,-15.5 -154,-34.5q-106,-25 -166,-42.5q-60,-17.5 -96,-34q-36,-16.5 -70,-36.5q-75,-45 -117,-120q-42,-75 -42,-187q0,-191 143.5,-292.5q143.5,-101.5 417.5,-101.5q262,0 393.5,82q131.5,82 169.5,271l-286,39q-22,-91 -89.5,-137q-67.5,-46 -193.5,-46q-134,0 -201,42q-67,42 -67,126q0,55 28.5,90q28.5,35 84.5,60q53,24 227,61q101,22 174,41.5q73,19.5 117,37.5q44,19 78.5,40q34.5,21 59.5,45q51,49 78,116.5q27,67.5 27,155.5zM7887,1434q0,158 58.5,238.5q58.5,80.5 166.5,80.5q74,0 121.5,-32.5q47.5,-32.5 66.5,-96.5l265,23q-115,294 -467,294q-244,0 -375,-144.5q-131,-144.5 -131,-421.5q0,-268 133,-412q133,-144 377,-144q233,0 356,154.5q123,154.5 123,452.5l0,8l-694,0zM8309,1258q-8,-131 -63,-196.5q-55,-65.5 -148,-65.5q-99,0 -152.5,69q-53.5,69 -56.5,193l420,0zM9075,437l0,1484l-281,0l0,-1484l281,0zM9595,1434q0,158 58.5,238.5q58.5,80.5 166.5,80.5q74,0 121.5,-32.5q47.5,-32.5 66.5,-96.5l265,23q-115,294 -467,294q-244,0 -375,-144.5q-131,-144.5 -131,-421.5q0,-268 133,-412q133,-144 377,-144q233,0 356,154.5q123,154.5 123,452.5l0,8l-694,0zM10017,1258q-8,-131 -63,-196.5q-55,-65.5 -148,-65.5q-99,0 -152.5,69q-53.5,69 -56.5,193l420,0zM10953,1941q-246,0 -380,-146.5q-134,-146.5 -134,-408.5q0,-268 135,-417.5q135,-149.5 383,-149.5q191,0 316,96q125,96 157,265l-283,14q-12,-83 -60,-132.5q-48,-49.5 -136,-49.5q-109,0 -163,90.5q-54,90.5 -54,272.5q0,187 55.5,280.5q55.5,93.5 165.5,93.5q80,0 134,-50.5q54,-50.5 67,-150.5l282,13q-15,114 -80.5,199.5q-65.5,85.5 -169.5,133q-104,47.5 -235,47.5zM12155,1905q-102,34 -237,34q-124,0 -191,-67.5q-67,-67.5 -67,-204.5l0,-638l-137,0l0,-190l151,0l88,-254l176,0l0,254l205,0l0,190l-205,0l0,562q0,79 30,116.5q30,37.5 93,37.5q30,0 94,-14l0,174z", "white")
   }
-  populateViewOptions(select) {
-    while (select.lastChild) {
-      select.removeChild(select.lastChild);
-    }
-    var option;
-
-    option = document.createElement('option');
-    option.text = "Full";
-    option.value = 0;    select.appendChild(option);
-    option = document.createElement('option');
-    option.text = "Compact";
-    option.value = 1;    select.appendChild(option);
-    option = document.createElement('option');
-    option.text = "Panel";
-    option.value = 2;    select.appendChild(option);
-    option = document.createElement('option');
-    option.text = "Tablet";
-    option.value = 3;    select.appendChild(option);
-    option = document.createElement('option');
-    option.text = "Display";
-    option.value = 4;    select.appendChild(option);
+  viewOptions() {
+    return [
+      "Full", "Compact", "Panel", "Tablet", "Display"
+    ];
+  }
+  segmentOptions() {
+    return [
+      "Real", "Straight"
+    ];
+  }
+  chosenSegments() {
+    const choices = ['real','straight'];
+    return choices[this.segments];
   }
   populateFullView(hasSeq, isSd1, isSd132) {
     this.addRectangle(-156, -32, 1023, 334.5, Colors.BLACK);
@@ -2253,7 +2252,7 @@ class Connector {
     this.addRectangle(235, 8, 245, 67.5, Colors.GLASS);
 
     this.displayContainer = createElement("svg");
-    this.display = new Display(this.displayContainer, 2, 40, "real");
+    this.display = new Display(this.displayContainer, 2, 40, this.chosenSegments());
     this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.displayContainer.setAttribute("x", 247.0);
     this.displayContainer.setAttribute("y", 32.5093567251462);
@@ -3933,7 +3932,7 @@ class Connector {
     this.addRectangle(25, -5, 245, 67.5, Colors.GLASS);
 
     this.displayContainer = createElement("svg");
-    this.display = new Display(this.displayContainer, 2, 40, "real");
+    this.display = new Display(this.displayContainer, 2, 40, this.chosenSegments());
     this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.displayContainer.setAttribute("x", 37.0);
     this.displayContainer.setAttribute("y", 19.509356725146198);
@@ -4431,7 +4430,7 @@ class Connector {
     this.addRectangle(25, -5, 245, 67.5, Colors.GLASS);
 
     this.displayContainer = createElement("svg");
-    this.display = new Display(this.displayContainer, 2, 40, "real");
+    this.display = new Display(this.displayContainer, 2, 40, this.chosenSegments());
     this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.displayContainer.setAttribute("x", 37.0);
     this.displayContainer.setAttribute("y", 19.509356725146198);
@@ -4812,7 +4811,7 @@ class Connector {
     this.addRectangle(30, -5, 245, 67.5, Colors.GLASS);
 
     this.displayContainer = createElement("svg");
-    this.display = new Display(this.displayContainer, 2, 40, "real");
+    this.display = new Display(this.displayContainer, 2, 40, this.chosenSegments());
     this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.displayContainer.setAttribute("x", 42.0);
     this.displayContainer.setAttribute("y", 19.509356725146198);
@@ -5218,7 +5217,7 @@ class Connector {
     this.addRectangle(11, 30.75936, 223, 20.48129, Colors.GLASS);
 
     this.displayContainer = createElement("svg");
-    this.display = new Display(this.displayContainer, 2, 40, "real");
+    this.display = new Display(this.displayContainer, 2, 40, this.chosenSegments());
     this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
     this.displayContainer.setAttribute("x", 12.0);
     this.displayContainer.setAttribute("y", 32.5093567251462);

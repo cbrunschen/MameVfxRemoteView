@@ -22,7 +22,7 @@ def main():
   parser.add_argument('-f', '--fonts', action=BooleanOptionalAction, default=False)
   parser.add_argument('-hc', '--hexcolors', action=BooleanOptionalAction, default=False)
   parser.add_argument('-tp', '--text-paths', action=BooleanOptionalAction, default=False)
-  parser.add_argument('-s', '--segments', choices=['default','straight','real'], default='default')
+  parser.add_argument('-s', '--segments', choices=['default','straight','real'], action='append', default=[])
   parser.add_argument('-D', '--debug', action='store_true', default=False)
   parser.add_argument('-tr', '--text-renderer', choices=render.choices, default=render.choices[0])
   parser.add_argument('-ido', '--include-display-only', action=BooleanOptionalAction, default=False)

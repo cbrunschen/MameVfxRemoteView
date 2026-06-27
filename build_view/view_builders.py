@@ -168,8 +168,7 @@ class ViewBuilder:
         self.addMultiPageChevrons(labels)
     
     if lightId >= 0:
-      # Light bounds are relative to button bounds
-      button.light = Light(Rect(w/3, h/25, w/3, h/3), lightId)
+      button.light = Light(Rect(x + w/3, y + h/25, w/3, h/3), lightId)
     
     return button
 

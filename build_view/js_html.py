@@ -18,11 +18,13 @@ class HTMLJSVisitor(ViewVisitor):
       self,
       text_renderer: TextRenderer,
       text_paths: bool = False,
-      segments: str = 'real'
+      segments: list[str] = ['real']
     ):
     self.text_renderer = text_renderer
     self.text_paths = text_paths
-    self.segments = segments if segments in {'real','straight'} else 'straight'
+    self.segments = list([s for s in segments if s in ['real','straight']])
+    if len(self.segments) == 0:
+      self.segments = ['real']
     self.indent = '    '
     self.defs: dict[str, str] = {}
     self.views: list[HTMLJSView] = []
@@ -95,7 +97,7 @@ class HTMLJSVisitor(ViewVisitor):
     bounds = display.bounds + self.offset
     self.append(dedent(f'''
       this.displayContainer = createElement("svg");
-      this.display = new Display(this.displayContainer, 2, 40, "{self.segments}");
+      this.display = new Display(this.displayContainer, 2, 40, this.chosenSegments());
       this.displayContainer.setAttribute("preserveAspectRatio", "xMidYMid meet");
       this.displayContainer.setAttribute("x", {bounds.x});
       this.displayContainer.setAttribute("y", {bounds.y});
@@ -114,7 +116,7 @@ class HTMLJSVisitor(ViewVisitor):
     addButton = f'this.addButton({bounds.coords()}, {button.number}, Colors.{color})'
     if button.light:
       light = button.light
-      bounds = light.bounds
+      bounds = light.bounds - button.bounds.origin
       self.append(f'{addButton}.addLight(this.addLight({bounds.coords()}, {light.number}));')
     else:
       self.append(f'{addButton};')
@@ -321,18 +323,13 @@ class HTMLJSVisitor(ViewVisitor):
     defs = ["  populateDefinitions() {"] + list(f'    {d}' for d in self.defs.values()) + ["  }"]
     functions = []
     dispatcher = ["  populateView(view, hasSeq, isSd1, isSd132) {"]
-    options = [indent(dedent('''\
-      populateViewOptions(select) {
-        while (select.lastChild) {
-          select.removeChild(select.lastChild);
-        }
-        var option;
-      '''), '  ')]
     
+    display_names = []
     for i, v in enumerate(self.views):
       camel_parts = [x.capitalize() for x in v.name.lower().split("_")]
       name = "".join(camel_parts)
       display_name = " ".join(camel_parts)
+      display_names.append(display_name)
 
       functions.append(f"  populate{name}View(hasSeq, isSd1, isSd132) {{")
       functions.extend(v.code)
@@ -340,14 +337,28 @@ class HTMLJSVisitor(ViewVisitor):
 
       dispatcher.append(f"    if (view == {i}) return this.populate{name}View(hasSeq, isSd1, isSd132);")
 
-      options.extend([
-        "    option = document.createElement('option');",
-        f'    option.text = "{display_name}";',
-        f"    option.value = {i};"
-        "    select.appendChild(option);"
-      ])
-    options.append("  }")
     dispatcher.append("  }")
+
+    display_names = ", ".join([f'"{n}"' for n in display_names])
+    segment_choices = ','.join(f"'{n}'" for n in self.segments)
+    segment_names = ", ".join(f'"{n.title()}"' for n in self.segments)
+    options = [
+      "  viewOptions() {",
+      "    return [",
+      indent(display_names, '      '),
+      "    ];",
+      "  }",
+      "  segmentOptions() {",
+      "    return [",
+      indent(segment_names, '      '),
+      "    ];",
+      "  }",
+      "  chosenSegments() {",
+      f"    const choices = [{segment_choices}];",
+      "    return choices[this.segments];",
+      "  }"
+    ]
+
 
     colordefs = ',\n'.join([f'  "{snake_to_upper_snake_case(c.name)}": "{c.hex}"' for c in colors])
     code = '\n'.join(defs + options + functions + dispatcher)

@@ -164,86 +164,89 @@ def transform(tf:Matrix, ps: list[tuple[float,float]]):
 def pp(ps: list[tuple[float,float]]) -> str:
 	return f'M{fn(ps[0][0])},{fn(ps[0][1])}' + ''.join([f'l{fn(x-px)},{fn(y-py)}' for ((px, py), (x,y)) in zip(ps[:-1], ps[1:])]) + ' Z'
 
-def straight_segments(thickness=300):
-	width = 1900
+def straight_segments(thickness=250, middle=0.42):
+	width = 1850
 	height = 3110
 	skewwidth = 340
 	yx = -skewwidth / height
 	shear = Matrix().shear(yx=yx)
 	tseg = shear.translate(500+skewwidth, 690)
+
+	dd = 4 * thickness / 5
+
 	return [
 		transform(tseg, ps) for ps in [
 			# top bar
 			horizontal_segment(
-					0 + 2*thickness/3, width - 2*thickness/3, 0 + thickness/2,
+					0 + dd, width - dd, 0 + thickness/2,
 					thickness),
 
 			# right-top bar
 			vertical_segment(
-					0 + 2*thickness/3, (height + thickness)/2 - 2*thickness/3, width - thickness/2,
+					0 + dd, (height + thickness)/2 - dd, width - thickness/2,
 					thickness),
 
 			# right-bottom bar
 			vertical_segment(
-					(height - thickness)/2 + 2*thickness/3, height - 2*thickness/3, width - thickness/2,
+					(height - thickness)/2 + dd, height - dd, width - thickness/2,
 					thickness),
 
 			# bottom bar
 			horizontal_segment(
-					0 + 2*thickness/3, width - 2*thickness/3, height - thickness/2,
+					0 + dd, width - dd, height - thickness/2,
 					thickness),
 
 			# left-bottom bar
 			vertical_segment(
-					(height - thickness)/2 + 2*thickness/3, height - 2*thickness/3, 0 + thickness/2,
+					(height - thickness)/2 + dd, height - dd, 0 + thickness/2,
 					thickness),
 
 			# left-top bar
 			vertical_segment(
-					0 + 2*thickness/3, (height + thickness)/2 - 2*thickness/3, 0 + thickness/2,
+					0 + dd, (height + thickness)/2 - dd, 0 + thickness/2,
 					thickness),
 
 			# horizontal-middle-left bar
 			horizontal_segment_caps(
-					0 + 2*thickness/3, width/2 - thickness/10, height/2,
+					0 + dd, middle*width - thickness/3, height/2,
 					thickness, LINE_CAP_START),
 
 			# horizontal-middle-right bar
 			horizontal_segment_caps(
-					0 + width/2 + thickness/10, width - 2*thickness/3, height/2,
+					0 + middle*width + thickness/3, width - dd, height/2,
 					thickness, LINE_CAP_END),
 
 			# vertical-middle-top bar
 			vertical_segment_caps(
-					0 + thickness + thickness/4, height/2 - thickness/2 - thickness/4, width/2,
+					0 + thickness + thickness/4, height/2 - thickness/2 - thickness/4, middle*width,
 					thickness, LINE_CAP_NONE),
 
 			# vertical-middle-bottom bar
 			vertical_segment_caps(
-					height/2 + thickness/2 + thickness/4, height - thickness - thickness/4, width/2,
+					height/2 + thickness/2 + thickness/4, height - thickness - thickness/4, middle*width,
 					thickness, LINE_CAP_NONE),
 
 			# diagonal-left-bottom bar
 			diagonal_segment(
-					0 + thickness + thickness/5, width/2 - thickness/2 - thickness/5,
+					0 + thickness + thickness/5, middle*width - thickness/2 - thickness/5,
 					height/2 + thickness/2 + thickness/4, height - thickness - thickness/4,
 					thickness, mirror=True),
 
 			# diagonal-left-top bar
 			diagonal_segment(
-					0 + thickness + thickness/5, width/2 - thickness/2 - thickness/5,
+					0 + thickness + thickness/5, middle*width - thickness/2 - thickness/5,
 					0 + thickness + thickness/4, height/2 - thickness/2 - thickness/4,
 					thickness),
 
 			# diagonal-right-top bar
 			diagonal_segment(
-					width/2 + thickness/2 + thickness/5, width - thickness - thickness/5,
+					middle*width + thickness/2 + thickness/5, width - thickness - thickness/5,
 					0 + thickness + thickness/4, height/2 - thickness/2 - thickness/4,
 					thickness, mirror=True),
 
 			# diagonal-right-bottom bar
 			diagonal_segment(
-					width/2 + thickness/2 + thickness/5, width - thickness - thickness/5,
+					middle*width + thickness/2 + thickness/5, width - thickness - thickness/5,
 					height/2 + thickness/2 + thickness/4, height - thickness - thickness/4,
 					thickness),
 		]
@@ -257,12 +260,12 @@ def straight_segments(thickness=300):
 straight_segment_paths_led14seg = [pp(segment) for segment in straight_segments()]
 straight_segment_paths_fip80b5r = [straight_segment_paths_led14seg[fip80b5r_from_led14seg_indexes[i]] for i in range(16)]
 
-def draw_segments(thickness=300):
+def draw_segments(thickness=300, middle=1./2.):
 	print('<?xml version="1.0" encoding="UTF-8"?>')
 	print(f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0" y="0" width="342" height="572" viewBox="0 0 3420 5720">')
 	print(f'<rect x="0" y="0" width="3420" height="5720" fill="#f7f7f70f" stroke="none" />')
 
-	for i, s in enumerate(straight_segments(thickness=thickness)):
+	for i, s in enumerate(straight_segments(thickness=thickness, middle=middle)):
 		lvl = int(ceil(255 * (i / 17)))
 		lvl = 3 * f'{lvl:02x}'
 		print(indent(f'<path d="{pp(s)}" fill="#{lvl}" />', '\t'))
@@ -281,14 +284,15 @@ def diagonals():
 
 def main():
 	parser = ArgumentParser()
-	parser.add_argument('thickness', type=int, default=300)
+	parser.add_argument('-t', '--thickness', type=int, default=300)
+	parser.add_argument('-m', '--middle', type=float, default=1./2.)
 	parser.add_argument('-D', '--debug', action='store_true', default=False)
 	# parser.add_argument('-fs', '--fontsize', default=1.4)
 
 	args = parser.parse_args()
 
 	set_debug(args.debug)
-	draw_segments(args.thickness)
+	draw_segments(args.thickness, args.middle)
 
 if __name__ == '__main__':
 	main()	# print(',\n'.join([f'"{s}"' for s in straight_segment_paths_fip80b5r]))

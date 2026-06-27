@@ -117,6 +117,14 @@ class Rect:
   def getY(self, d):
     return self.y + d * self.h
   
+  @property
+  def origin(self):
+    return Vector(self.x, self.y)
+  
+  @property
+  def extent(self):
+    return Vector(self.w, self.h)
+  
   def fitWithin(self, enclosing):
     xscale = enclosing.w / self.w
     yscale = enclosing.h / self.h
