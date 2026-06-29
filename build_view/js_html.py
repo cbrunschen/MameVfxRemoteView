@@ -6,11 +6,20 @@ from colors import colors
 from view import *
 from util import fnum
 from render import TextRenderer
+from vfd import segment_paths_fip80b5r_order as real_segments
+from straight_segments import straight_segment_paths_fip80b5r as straight_segments
 
 @dataclass
 class HTMLJSView:
   name: str
   code: list[str] = field(default_factory=list)
+
+
+available_segments = {
+  'real': real_segments,
+  'straight': straight_segments
+}
+
 
 class HTMLJSVisitor(ViewVisitor):
 
@@ -359,8 +368,16 @@ class HTMLJSVisitor(ViewVisitor):
       "  }"
     ]
 
-
     colordefs = ',\n'.join([f'  "{snake_to_upper_snake_case(c.name)}": "{c.hex}"' for c in colors])
     code = '\n'.join(defs + options + functions + dispatcher)
 
-    return template.replace("//COLORS//", colordefs).replace('//CODE//', code)
+    segment_paths = []
+    for s in self.segments:
+      segment_paths.append(f'  \'{s}\': [')
+      segment_paths.extend([f'    "{s}",' for s in available_segments[s]])
+      segment_paths.append('  ],')
+
+    return template\
+      .replace("//SEGMENTS//", '\n'.join(segment_paths))\
+      .replace("//COLORS//", colordefs)\
+      .replace('//CODE//', code)

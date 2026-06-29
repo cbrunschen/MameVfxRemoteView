@@ -207,24 +207,24 @@ def straight_segments(thickness=250, middle=0.42):
 					thickness),
 
 			# horizontal-middle-left bar
-			horizontal_segment_caps(
+			horizontal_segment(
 					0 + dd, middle*width - thickness/3, height/2,
-					thickness, LINE_CAP_START),
+					thickness),
 
 			# horizontal-middle-right bar
-			horizontal_segment_caps(
+			horizontal_segment(
 					0 + middle*width + thickness/3, width - dd, height/2,
-					thickness, LINE_CAP_END),
+					thickness),
 
 			# vertical-middle-top bar
-			vertical_segment_caps(
-					0 + thickness + thickness/4, height/2 - thickness/2 - thickness/4, middle*width,
-					thickness, LINE_CAP_NONE),
+			vertical_segment(
+					0 + thickness + thickness/4, (height + thickness)/2 - dd, middle*width,
+					thickness),
 
 			# vertical-middle-bottom bar
-			vertical_segment_caps(
-					height/2 + thickness/2 + thickness/4, height - thickness - thickness/4, middle*width,
-					thickness, LINE_CAP_NONE),
+			vertical_segment(
+					(height - thickness)/2 + dd, height - thickness - thickness/4, middle*width,
+					thickness),
 
 			# diagonal-left-bottom bar
 			diagonal_segment(
@@ -260,7 +260,7 @@ def straight_segments(thickness=250, middle=0.42):
 straight_segment_paths_led14seg = [pp(segment) for segment in straight_segments()]
 straight_segment_paths_fip80b5r = [straight_segment_paths_led14seg[fip80b5r_from_led14seg_indexes[i]] for i in range(16)]
 
-def draw_segments(thickness=300, middle=1./2.):
+def draw_segments(thickness=250, middle=0.42):
 	print('<?xml version="1.0" encoding="UTF-8"?>')
 	print(f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0" y="0" width="342" height="572" viewBox="0 0 3420 5720">')
 	print(f'<rect x="0" y="0" width="3420" height="5720" fill="#f7f7f70f" stroke="none" />')
@@ -271,6 +271,10 @@ def draw_segments(thickness=300, middle=1./2.):
 		print(indent(f'<path d="{pp(s)}" fill="#{lvl}" />', '\t'))
 
 	print('</svg>')
+
+def js_segments(thickness=250, middle=0.42):
+	for i, s in enumerate(straight_segment_paths_fip80b5r):
+		print(indent(f'"{s}",', '    '))
 
 def diagonals():
 	print('<?xml version="1.0" encoding="UTF-8"?>')
@@ -284,8 +288,8 @@ def diagonals():
 
 def main():
 	parser = ArgumentParser()
-	parser.add_argument('-t', '--thickness', type=int, default=300)
-	parser.add_argument('-m', '--middle', type=float, default=1./2.)
+	parser.add_argument('-t', '--thickness', type=int, default=250)
+	parser.add_argument('-m', '--middle', type=float, default=0.42)
 	parser.add_argument('-D', '--debug', action='store_true', default=False)
 	# parser.add_argument('-fs', '--fontsize', default=1.4)
 
