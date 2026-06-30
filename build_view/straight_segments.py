@@ -165,12 +165,12 @@ def pp(ps: list[tuple[float,float]]) -> str:
 	return f'M{fn(ps[0][0])},{fn(ps[0][1])}' + ''.join([f'l{fn(x-px)},{fn(y-py)}' for ((px, py), (x,y)) in zip(ps[:-1], ps[1:])]) + ' Z'
 
 def straight_segments(thickness=250, middle=0.42):
-	width = 1850
+	width = 1890
 	height = 3110
 	skewwidth = 340
 	yx = -skewwidth / height
 	shear = Matrix().shear(yx=yx)
-	tseg = shear.translate(500+skewwidth, 690)
+	tseg = shear.translate(460+skewwidth, 690)
 
 	dd = 4 * thickness / 5
 
@@ -252,9 +252,9 @@ def straight_segments(thickness=250, middle=0.42):
 		]
 	] + [
 		# Decimal Point / Dot
-		transform(shear.translate(2720, 3800 - 0.7 * thickness), chamfered_rect(0, 0, thickness, 1.4 * thickness, thickness / 3)),
+		transform(shear.translate(2670, 3790 - 0.8 * thickness), chamfered_rect(0, 0, thickness, 1.6 * thickness, thickness / 3)),
 		# Underline
-		transform(shear.translate(1385, 4550), chamfered_rect(0, 0, 1850, thickness, min(60, thickness/3))),
+		transform(shear.translate(1350, 4560), chamfered_rect(0, 0, 1800, thickness, min(60, thickness/3))),
 	]
 
 straight_segment_paths_led14seg = [pp(segment) for segment in straight_segments()]
