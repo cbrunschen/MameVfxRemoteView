@@ -31,7 +31,7 @@ class HTMLJSVisitor(ViewVisitor):
     ):
     self.text_renderer = text_renderer
     self.text_paths = text_paths
-    self.segments = list([s for s in segments if s in ['real','straight']])
+    self.segments = list(dict.fromkeys([s for s in segments if s in available_segments.keys()]))
     if len(self.segments) == 0:
       self.segments = ['real']
     self.indent = '    '

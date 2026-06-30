@@ -89,7 +89,7 @@ class MameLayoutVisitor(ViewVisitor):
     self.fonts = fonts
     self.hexcolors = hexcolors
     self.text_paths = text_paths
-    self.segments = list(set(segments))
+    self.segments = list(dict.fromkeys(segments))
     if len(self.segments) == 0:
       self.segments = ['default']
     self.configurations = [Configuration(segment_configurations[segs]) for segs in self.segments]
