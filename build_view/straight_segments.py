@@ -260,7 +260,7 @@ def straight_segments(thickness=250, middle=0.42):
 straight_segment_paths_led14seg = [pp(segment) for segment in straight_segments()]
 straight_segment_paths_fip80b5r = [straight_segment_paths_led14seg[fip80b5r_from_led14seg_indexes[i]] for i in range(16)]
 
-def draw_segments(thickness=250, middle=0.42):
+def draw_segments(thickness=250, middle=0.45):
 	print('<?xml version="1.0" encoding="UTF-8"?>')
 	print(f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0" y="0" width="342" height="572" viewBox="0 0 3420 5720">')
 	print(f'<rect x="0" y="0" width="3420" height="5720" fill="#f7f7f70f" stroke="none" />')
@@ -272,7 +272,7 @@ def draw_segments(thickness=250, middle=0.42):
 
 	print('</svg>')
 
-def js_segments(thickness=250, middle=0.42):
+def js_segments():
 	for i, s in enumerate(straight_segment_paths_fip80b5r):
 		print(indent(f'"{s}",', '    '))
 
